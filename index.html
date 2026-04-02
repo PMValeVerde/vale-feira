@@ -8,191 +8,204 @@
 
 <style>
 body {
-  font-family: Arial;
-  background: #0f172a;
+  background: #111;
   color: white;
+  font-family: Arial;
   text-align: center;
-  margin: 0;
 }
 
-.container {
+.box {
+  max-width: 320px;
+  margin: auto;
   padding: 20px;
 }
 
-h1 {
+h2 {
   color: #22c55e;
 }
 
-button {
-  padding: 15px;
-  margin: 10px;
-  border: none;
-  border-radius: 10px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.btn-servidor { background: #2563eb; color: white; }
-.btn-feirante { background: #16a34a; color: white; }
-.btn-pagar { background: #22c55e; color: white; width: 100%; }
-
-input {
-  padding: 12px;
-  margin: 5px;
-  width: 90%;
-  border-radius: 8px;
-  border: none;
-}
-
 #reader {
-  width: 300px;
+  width: 250px;
   margin: auto;
 }
 
-.card {
-  background: #1e293b;
+.display {
+  background: #000;
   padding: 15px;
-  border-radius: 12px;
-  margin-top: 15px;
+  border-radius: 10px;
+  margin: 10px 0;
+  min-height: 80px;
 }
+
+input {
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  text-align: center;
+  border-radius: 10px;
+  border: none;
+}
+
+button {
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.green { background: #22c55e; color: black; }
+.blue { background: #3b82f6; color: white; }
+.gray { background: #444; color: white; }
 
 </style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="box">
 
-<h1>💳 Vale Feira</h1>
-
-<button class="btn-servidor" onclick="lerServidor()">📷 Ler Servidor</button>
-<button class="btn-feirante" onclick="lerFeirante()">🧑‍🌾 Ler Feirante</button>
+<h2>💳 Vale Feira</h2>
 
 <div id="reader"></div>
 
-<div id="info" class="card"></div>
+<div class="display" id="tela">
+Aguardando leitura...
+</div>
 
-<input type="number" id="valor" placeholder="Valor da compra">
+<input type="number" id="valor" placeholder="R$ 0,00">
 
-<button class="btn-pagar" onclick="pagar()">💰 Pagar</button>
-
-<div id="resultado" class="card"></div>
-
-<button class="btn-feirante" onclick="verExtrato()">📄 Ver Extrato</button>
-
-<div id="extrato" class="card"></div>
+<button class="blue" onclick="lerServidor()">📷 Ler Servidor</button>
+<button class="gray" onclick="lerFeirante()">🧑‍🌾 Ler Feirante</button>
+<button class="green" onclick="pagar()">💰 Confirmar</button>
+<button class="gray" onclick="extrato()">📄 Extrato</button>
 
 </div>
 
 <script>
 
-// 🔗 COLE AQUI SUA URL DO APPS SCRIPT
+// 🔗 SUA URL
 const URL = "https://script.google.com/macros/s/AKfycbyjqDoYn7z7-twvHfbdt7cVUgMiYaWbbA_dlK7c3RzTHd6CBUrS1J7wXaNKQB9goSfG/exec";
 
-// VARIÁVEIS
-let codigoServidor = "";
-let codigoFeirante = "";
-let senhaFeirante = "";
+let servidor = "";
+let feirante = "";
+let senha = "";
 
 // =========================
-// 📷 LEITOR QR SERVIDOR
+// 📷 LER SERVIDOR
 // =========================
 function lerServidor() {
-  iniciarLeitor((codigo) => {
-    codigoServidor = codigo;
+  scan((codigo) => {
+
+    servidor = codigo;
 
     fetch(`${URL}?servidor=${codigo}&consultar=1`)
     .then(r => r.json())
     .then(d => {
 
       if (d.erro) {
-        alert(d.erro);
+        tela(d.erro);
         return;
       }
 
-      document.getElementById("info").innerHTML = `
-        <h3>${d.nome}</h3>
-        <p>${d.secretaria}</p>
-        <p>💰 Saldo: R$ ${d.saldo.toFixed(2)}</p>
-      `;
+      tela(`
+        👤 ${d.nome}<br>
+        🏢 ${d.secretaria}<br>
+        💰 Saldo: R$ ${d.saldo.toFixed(2)}
+      `);
     });
+
   });
 }
 
 // =========================
-// 📷 LEITOR QR FEIRANTE
+// 📷 LER FEIRANTE
 // =========================
 function lerFeirante() {
-  iniciarLeitor((codigo) => {
-    codigoFeirante = codigo;
-    senhaFeirante = prompt("Digite a senha do feirante:");
+  scan((codigo) => {
+    feirante = codigo;
+    senha = prompt("Senha do feirante:");
+    tela("Feirante identificado ✅");
   });
 }
 
 // =========================
-// 💰 PAGAMENTO
+// 💰 PAGAR
 // =========================
 function pagar() {
 
   let valor = document.getElementById("valor").value;
 
-  fetch(`${URL}?servidor=${codigoServidor}&feirante=${codigoFeirante}&valor=${valor}&senha=${senhaFeirante}`)
+  fetch(`${URL}?servidor=${servidor}&feirante=${feirante}&valor=${valor}&senha=${senha}`)
   .then(r => r.json())
   .then(d => {
 
     if (d.erro) {
-      document.getElementById("resultado").innerHTML = "❌ " + d.erro;
+      tela("❌ " + d.erro);
       return;
     }
 
-    document.getElementById("resultado").innerHTML =
-      `✅ Pagamento realizado<br>Saldo restante: R$ ${d.saldo.toFixed(2)}`;
+    tela(`✅ Pago<br>Saldo: R$ ${d.saldo.toFixed(2)}`);
   });
 }
 
 // =========================
-// 📄 EXTRATO
+// 📄 EXTRATO (CORRIGIDO)
 // =========================
-function verExtrato() {
+function extrato() {
 
-  fetch(`${URL}?feirante=${codigoFeirante}&senha=${senhaFeirante}&extrato=1`)
+  if (!feirante) {
+    alert("Leia o QR do feirante primeiro!");
+    return;
+  }
+
+  fetch(`${URL}?feirante=${feirante}&senha=${senha}&extrato=1`)
   .then(r => r.json())
   .then(d => {
 
     if (d.erro) {
-      alert(d.erro);
+      tela(d.erro);
       return;
     }
 
-    let html = "<h3>Extrato</h3>";
+    let html = "📄 Últimas vendas:<br><br>";
 
     d.extrato.forEach(e => {
-      html += `<p>${e.data} - ${e.servidor} - R$ ${e.valor}</p>`;
+      html += `${e.data} - R$ ${e.valor}<br>`;
     });
 
-    html += `<hr><strong>💰 Total do dia: R$ ${d.totalHoje.toFixed(2)}</strong>`;
+    html += `<br>💰 Total hoje: R$ ${d.totalHoje.toFixed(2)}`;
 
-    document.getElementById("extrato").innerHTML = html;
+    tela(html);
   });
 }
 
 // =========================
-// 📷 FUNÇÃO LEITOR
+// 📷 SCANNER
 // =========================
-function iniciarLeitor(callback) {
+function scan(callback) {
 
   document.getElementById("reader").innerHTML = "";
 
-  const html5QrCode = new Html5Qrcode("reader");
+  const qr = new Html5Qrcode("reader");
 
-  html5QrCode.start(
+  qr.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    (decodedText) => {
-      html5QrCode.stop();
-      callback(decodedText);
+    { fps: 10, qrbox: 200 },
+    (text) => {
+      qr.stop();
+      callback(text);
     }
   );
+}
+
+// =========================
+// 📺 DISPLAY
+// =========================
+function tela(msg) {
+  document.getElementById("tela").innerHTML = msg;
 }
 
 </script>
