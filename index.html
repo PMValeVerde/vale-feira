@@ -1,207 +1,196 @@
-function doGet(e) {
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vale Feira</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
+
+.card {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 15px;
+}
+
+button {
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.btn {
+  background: #22c55e;
+  color: white;
+}
+
+.btn-sec {
+  background: #3b82f6;
+  color: white;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  margin-top: 10px;
+  font-size: 16px;
+}
+
+#reader {
+  margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>💳 Vale Feira</h2>
+
+<div class="card">
+  <h3>Servidor</h3>
+  <button onclick="lerServidor()">📷 Ler QR Servidor</button>
+  <p id="servidor"></p>
+</div>
+
+<div class="card">
+  <h3>Feirante</h3>
+  <button onclick="lerFeirante()">📷 Ler QR Feirante</button>
+  <p id="feirante"></p>
+
+  <input type="password" id="senha" placeholder="Senha do feirante">
+</div>
+
+<div class="card">
+  <h3>Valor</h3>
+  <input type="number" id="valor" placeholder="Valor da compra">
+</div>
+
+<div class="card">
+  <button class="btn" onclick="pagar()">💰 Pagar</button>
+  <button class="btn-sec" onclick="verExtrato()">📄 Ver Extrato</button>
+</div>
+
+<div id="reader"></div>
+
+<div class="card">
+  <h3>Resultado</h3>
+  <pre id="resultado"></pre>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyTgGevWVwyvuZoDT3Dm2x62RLx4s5jS2MURnHViy2wKUcbpF5KkzPRroOtZ6lMtq4P/exec";
+
+let servidor = "";
+let feirante = "";
+let leitor;
+
+function iniciarScanner(callback) {
+  document.getElementById("reader").innerHTML = "";
+  leitor = new Html5Qrcode("reader");
+
+  leitor.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+      leitor.stop();
+      callback(decodedText);
+    }
+  );
+}
+
+function lerServidor() {
+  iniciarScanner((texto) => {
+    servidor = texto.trim();
+    document.getElementById("servidor").innerText = servidor;
+  });
+}
+
+function lerFeirante() {
+  iniciarScanner((texto) => {
+    feirante = texto.trim();
+    document.getElementById("feirante").innerText = feirante;
+  });
+}
+
+async function pagar() {
+  const valor = document.getElementById("valor").value;
+  const senha = document.getElementById("senha").value;
+
+  if (!servidor || !feirante || !valor || !senha) {
+    alert("Preencha tudo");
+    return;
+  }
+
+  const url = `${API_URL}?servidor=${servidor}&feirante=${feirante}&valor=${valor}&senha=${senha}`;
+
+  document.getElementById("resultado").innerText = "Processando...";
 
   try {
+    const res = await fetch(url);
+    const data = await res.json();
 
-    var servidor = limpar(e.parameter.servidor);
-    var feiranteQR = limpar(e.parameter.feirante);
-    var valor = parseFloat(e.parameter.valor);
-    var senha = limpar(e.parameter.senha);
-
-    var planilha = SpreadsheetApp.openById("1yj_xgaNV1x01LmL3JGWFBoA5tfUBt6q43crgAoqP8MU");
-
-    var abaServidores = planilha.getSheetByName("SERVIDORES");
-    var abaMov = planilha.getSheetByName("MOVIMENTOS");
-    var abaFeirantes = planilha.getSheetByName("FEIRANTES");
-
-    // 🔐 EXTRATO COM SENHA
-    if (feiranteQR && !servidor) {
-
-      return resposta(extratoFeirante(feiranteQR, senha, abaFeirantes, abaMov));
+    if (data.erro) {
+      document.getElementById("resultado").innerText = "❌ " + data.erro;
+    } else {
+      document.getElementById("resultado").innerText =
+        "✅ Pagamento realizado\nSaldo: R$ " + data.saldo;
     }
 
-    var dados = abaServidores.getRange("A2:E").getValues();
+  } catch (e) {
+    document.getElementById("resultado").innerText = "Erro de conexão";
+  }
+}
 
-    var linha = -1;
-    var nome = "";
-    var saldoAtual = 0;
-    var secretaria = "";
-    var codigo = "";
+async function verExtrato() {
+  const senha = document.getElementById("senha").value;
 
-    for (var i = 0; i < dados.length; i++) {
+  if (!feirante || !senha) {
+    alert("Informe feirante e senha");
+    return;
+  }
 
-      var codigoPlanilha = limpar(dados[i][4]);
+  const url = `${API_URL}?feirante=${feirante}&senha=${senha}&extrato=1`;
 
-      if (codigoPlanilha.includes(servidor)) {
+  document.getElementById("resultado").innerText = "Buscando extrato...";
 
-        linha = i + 2;
-        nome = dados[i][0];
-        saldoAtual = converterValor(dados[i][1]);
-        secretaria = dados[i][3];
-        codigo = dados[i][4];
-        break;
-      }
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.erro) {
+      document.getElementById("resultado").innerText = "❌ " + data.erro;
+      return;
     }
 
-    if (linha === -1) {
-      return resposta({ erro: "Servidor não encontrado" });
-    }
+    let texto = "📄 EXTRATO:\n\n";
 
-    // 🔎 CONSULTA DE SALDO
-    if (!valor) {
-      return resposta({
-        nome: nome,
-        saldo: saldoAtual
-      });
-    }
-
-    if (saldoAtual < valor) {
-      return resposta({
-        erro: "Saldo insuficiente",
-        saldo: saldoAtual
-      });
-    }
-
-    var feirante = validarFeirante(feiranteQR, senha, abaFeirantes);
-
-    if (!feirante.valido) {
-      return resposta({ erro: feirante.erro });
-    }
-
-    var nomeFeirante = feirante.nome;
-
-    var novoSaldo = saldoAtual - valor;
-
-    abaServidores.getRange(linha, 2).setValue(novoSaldo);
-
-    abaMov.appendRow([
-      new Date(),
-      codigo,
-      valor,
-      nome,
-      secretaria,
-      nomeFeirante,
-      novoSaldo
-    ]);
-
-    return resposta({
-      sucesso: true,
-      nome: nome,
-      saldo: novoSaldo,
-      feirante: nomeFeirante
+    data.extrato.forEach(item => {
+      texto += `${item.data}\n${item.servidor} - R$ ${item.valor}\n\n`;
     });
 
-  } catch (erro) {
+    document.getElementById("resultado").innerText = texto;
 
-    return resposta({ erro: erro.message });
-
+  } catch (e) {
+    document.getElementById("resultado").innerText = "Erro ao buscar extrato";
   }
 }
+</script>
 
-//
-// 🔐 VALIDA FEIRANTE + SENHA
-//
-function validarFeirante(qr, senha, aba) {
-
-  var dados = aba.getRange("A2:D").getValues();
-
-  for (var i = 0; i < dados.length; i++) {
-
-    var qrPlanilha = limpar(dados[i][1]);
-    var senhaPlanilha = limpar(dados[i][3]);
-
-    if (qrPlanilha === qr) {
-
-      if (!senha) {
-        return { valido: false, erro: "Informe a senha" };
-      }
-
-      if (senhaPlanilha !== senha) {
-        return { valido: false, erro: "Senha inválida" };
-      }
-
-      return {
-        valido: true,
-        nome: dados[i][0]
-      };
-    }
-  }
-
-  return { valido: false, erro: "Feirante não encontrado" };
-}
-
-//
-// 📊 EXTRATO COM SENHA
-//
-function extratoFeirante(qr, senha, abaFeirantes, abaMov) {
-
-  var feirante = validarFeirante(qr, senha, abaFeirantes);
-
-  if (!feirante.valido) {
-    return { erro: feirante.erro };
-  }
-
-  var nomeFeirante = feirante.nome;
-
-  var dados = abaMov.getRange("A2:G").getValues();
-
-  var extrato = [];
-  var total = 0;
-
-  for (var i = 0; i < dados.length; i++) {
-
-    if (String(dados[i][5]).toUpperCase() === nomeFeirante.toUpperCase()) {
-
-      extrato.push({
-        data: dados[i][0],
-        servidor: dados[i][3],
-        valor: dados[i][2]
-      });
-
-      total += Number(dados[i][2]);
-    }
-  }
-
-  return {
-    feirante: nomeFeirante,
-    total: total,
-    quantidade: extrato.length,
-    extrato: extrato
-  };
-}
-
-//
-// 🔧 LIMPEZA
-//
-function limpar(txt) {
-  return String(txt || "")
-    .trim()
-    .replace(/\n/g, "")
-    .replace(/\r/g, "")
-    .replace(/\s+/g, " ")
-    .toUpperCase();
-}
-
-//
-// 💰 CONVERSÃO
-//
-function converterValor(valor) {
-
-  if (typeof valor === "number") return valor;
-
-  return parseFloat(
-    String(valor)
-      .replace("R$", "")
-      .replace(/\./g, "")
-      .replace(",", ".")
-      .trim()
-  ) || 0;
-}
-
-//
-// 🔁 RESPOSTA
-//
-function resposta(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+</body>
+</html>
