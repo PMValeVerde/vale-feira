@@ -1,225 +1,146 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vale Feira</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-
 body {
-  background: #000;
-  color: #00ff88;
+  margin:0;
   font-family: Arial;
-  text-align: center;
-  margin: 0;
+  background:#0f172a;
+  color:white;
+  text-align:center;
 }
 
-.box {
-  max-width: 400px;
-  margin: auto;
-  padding: 20px;
-}
-
-h1 {
-  font-size: 40px;
-  margin-bottom: 10px;
-}
-
-#reader {
-  width: 280px;
-  margin: auto;
-}
-
-.display {
-  background: #000;
-  border: 3px solid #00ff88;
-  padding: 20px;
-  border-radius: 12px;
-  margin: 15px 0;
-  font-size: 28px;
-  min-height: 120px;
-}
-
-input {
-  width: 100%;
-  padding: 20px;
-  font-size: 26px;
-  text-align: center;
-  border-radius: 10px;
-  border: none;
-  margin-bottom: 10px;
+.container {
+  padding:20px;
 }
 
 button {
-  width: 100%;
-  padding: 20px;
-  margin-top: 10px;
-  font-size: 22px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
+  width:100%;
+  padding:18px;
+  margin:10px 0;
+  border:none;
+  border-radius:12px;
+  font-size:18px;
+  color:white;
 }
 
-.green { background: #00ff88; color: black; }
-.blue { background: #2563eb; color: white; }
-.gray { background: #333; color: white; }
+.btn1 { background:#2563eb; }
+.btn2 { background:#7c3aed; }
+.btn3 { background:#16a34a; }
 
+.card {
+  background:#1e293b;
+  padding:20px;
+  border-radius:15px;
+  margin-top:15px;
+}
+
+#reader {
+  width:100%;
+  margin-top:10px;
+}
 </style>
+
 </head>
 
 <body>
 
-<div class="box">
+<div class="container">
 
-<h1>💳 VALE FEIRA</h1>
+<h2>💳 Vale Feira</h2>
+
+<button class="btn1" onclick="startScan('servidor')">📷 Ler Servidor</button>
+<button class="btn2" onclick="startScan('feirante')">📷 Ler Feirante</button>
 
 <div id="reader"></div>
 
-<div id="tela" class="display">
-AGUARDANDO...
+<div class="card">
+  <h3 id="nome">Nenhum servidor</h3>
+  <h1 id="saldo">R$ 0,00</h1>
 </div>
 
-<input type="number" id="valor" placeholder="DIGITE O VALOR">
-
-<button class="blue" onclick="lerServidor()">LER SERVIDOR</button>
-<button class="gray" onclick="lerFeirante()">LER FEIRANTE</button>
-<button class="green" onclick="pagar()">CONFIRMAR</button>
-<button class="gray" onclick="extrato()">EXTRATO</button>
+<div class="card">
+  <input id="valor" placeholder="Valor (R$)">
+  <input id="feirante" placeholder="Feirante">
+  <button class="btn3" onclick="pagar()">💰 Confirmar</button>
+</div>
 
 </div>
 
 <script>
 
-// 🔗 COLE SUA URL AQUI
-const URL = "https://script.google.com/macros/s/AKfycbyjqDoYn7z7-twvHfbdt7cVUgMiYaWbbA_dlK7c3RzTHd6CBUrS1J7wXaNKQB9goSfG/exec";
+const URL = "https://script.google.com/macros/s/AKfycbwIUVTx29ykJ1O4r-Iqmg-5tpTZpbgFgODti8bceF5_CrrxfjKN9ZzxP8NDiNkj4HnD/exec";
 
 let servidor = "";
-let feirante = "";
-let senha = "";
+let scanner;
 
-// =========================
-// LER SERVIDOR
-// =========================
-function lerServidor() {
-
-  scan((codigo) => {
-
-    servidor = codigo;
-
-    fetch(`${URL}?servidor=${codigo}&consultar=1`)
-    .then(r => r.json())
-    .then(d => {
-
-      if (d.erro) {
-        tela("ERRO");
-        return;
-      }
-
-      tela(`
-        ${d.nome}<br>
-        ${d.secretaria}<br>
-        SALDO: R$ ${d.saldo.toFixed(2)}
-      `);
-
-    });
-
-  });
-}
-
-// =========================
-// LER FEIRANTE
-// =========================
-function lerFeirante() {
-
-  scan((codigo) => {
-    feirante = codigo;
-    senha = prompt("SENHA:");
-    tela("FEIRANTE OK");
-  });
-
-}
-
-// =========================
-// PAGAR
-// =========================
-function pagar() {
-
-  let valor = document.getElementById("valor").value;
-
-  fetch(`${URL}?servidor=${servidor}&feirante=${feirante}&valor=${valor}&senha=${senha}`)
-  .then(r => r.json())
-  .then(d => {
-
-    if (d.erro) {
-      tela("ERRO: " + d.erro);
-      return;
-    }
-
-    tela(`PAGO<br>SALDO: R$ ${d.saldo.toFixed(2)}`);
-
-  });
-
-}
-
-// =========================
-// EXTRATO
-// =========================
-function extrato() {
-
-  if (!feirante) {
-    alert("Leia o feirante");
-    return;
-  }
-
-  fetch(`${URL}?feirante=${feirante}&senha=${senha}&extrato=1`)
-  .then(r => r.json())
-  .then(d => {
-
-    if (d.erro) {
-      tela(d.erro);
-      return;
-    }
-
-    let html = "VENDAS:<br><br>";
-
-    d.extrato.forEach(e => {
-      html += `R$ ${e.valor}<br>`;
-    });
-
-    html += `<br>TOTAL: R$ ${d.totalHoje.toFixed(2)}`;
-
-    tela(html);
-
-  });
-
-}
-
-// =========================
-// SCANNER
-// =========================
-function scan(callback) {
+// 📷 iniciar câmera
+function startScan(tipo) {
 
   document.getElementById("reader").innerHTML = "";
 
-  const qr = new Html5Qrcode("reader");
+  scanner = new Html5Qrcode("reader");
 
-  qr.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 220 },
-    (text) => {
-      qr.stop();
-      callback(text);
+  scanner.start(
+    { facingMode: "environment" }, // 🔥 câmera traseira
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+
+      scanner.stop();
+
+      if (tipo === "servidor") {
+        servidor = decodedText;
+        consultar();
+      } else {
+        document.getElementById("feirante").value = decodedText;
+      }
+
     }
   );
 }
 
-// =========================
-// TELA
-// =========================
-function tela(msg) {
-  document.getElementById("tela").innerHTML = msg;
+// 🔎 consulta saldo
+function consultar() {
+
+  fetch(`${URL}?servidor=${servidor}`)
+  .then(r => r.json())
+  .then(d => {
+
+    if(d.erro){
+      alert(d.erro);
+      return;
+    }
+
+    document.getElementById("nome").innerText = d.nome;
+    document.getElementById("saldo").innerText = "R$ " + d.saldo;
+
+  });
+}
+
+// 💰 pagamento
+function pagar() {
+
+  let valor = document.getElementById("valor").value;
+  let feirante = document.getElementById("feirante").value;
+
+  fetch(`${URL}?servidor=${servidor}&valor=${valor}&feirante=${feirante}`)
+  .then(r => r.json())
+  .then(d => {
+
+    if(d.erro){
+      alert(d.erro);
+      return;
+    }
+
+    alert("Pagamento realizado!");
+    consultar();
+
+  });
 }
 
 </script>
