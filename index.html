@@ -82,7 +82,6 @@ input {
 
 <script>
 
-// 🔥 SEU BACKEND
 let api = "https://script.google.com/macros/s/AKfycbwvWHuY2TY6dpADj8217e_c0FBpzimalGTe7MxrAUlMeM9QL0fNJB-p8aoXeLwG2rFl/exec";
 
 let codServidor = "";
@@ -103,7 +102,7 @@ function vibrar(){
   if (navigator.vibrate) navigator.vibrate(200);
 }
 
-// 📷 SCANNER (AGORA FUNCIONA)
+// 📷 SCANNER COM CÂMERA TRASEIRA
 function abrirScanner(tipo){
 
   const html5QrCode = new Html5Qrcode("reader");
@@ -115,7 +114,13 @@ function abrirScanner(tipo){
       return;
     }
 
-    let cameraId = devices[0].id;
+    let camera = devices.find(d =>
+      d.label.toLowerCase().includes("back") ||
+      d.label.toLowerCase().includes("traseira") ||
+      d.label.toLowerCase().includes("environment")
+    );
+
+    let cameraId = camera ? camera.id : devices[devices.length - 1].id;
 
     html5QrCode.start(
       cameraId,
@@ -136,7 +141,6 @@ function abrirScanner(tipo){
         vibrar();
 
         html5QrCode.stop();
-
       }
     );
 
@@ -145,7 +149,7 @@ function abrirScanner(tipo){
   });
 }
 
-// 💰 REGISTRAR COMPRA
+// 💰 REGISTRO
 function registrar(){
 
   let valor = document.getElementById("valor").value;
@@ -174,7 +178,6 @@ function registrar(){
       beep(800);
       vibrar();
 
-      // limpa
       codServidor = "";
       codFeirante = "";
       document.getElementById("valor").value = "";
@@ -182,13 +185,10 @@ function registrar(){
       document.getElementById("feirante").value = "";
     }
 
-  })
-  .catch(err => {
-    document.getElementById("status").innerText = "❌ Erro conexão";
   });
 }
 
-// 🔗 AUTO PREENCHIMENTO (QR SEM CÂMERA)
+// 🔗 AUTO PREENCHIMENTO
 window.onload = function(){
 
   let params = new URLSearchParams(window.location.search);
