@@ -1,228 +1,207 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+function doGet(e) {
 
-<title>Vale Feira</title>
+  try {
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+    var servidor = limpar(e.parameter.servidor);
+    var feiranteQR = limpar(e.parameter.feirante);
+    var valor = parseFloat(e.parameter.valor);
+    var senha = limpar(e.parameter.senha);
 
-<style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: linear-gradient(135deg, #1e3a8a, #2563eb);
-  color: white;
-}
+    var planilha = SpreadsheetApp.openById("1yj_xgaNV1x01LmL3JGWFBoA5tfUBt6q43crgAoqP8MU");
 
-.container {
-  max-width: 420px;
-  margin: auto;
-  padding: 20px;
-}
+    var abaServidores = planilha.getSheetByName("SERVIDORES");
+    var abaMov = planilha.getSheetByName("MOVIMENTOS");
+    var abaFeirantes = planilha.getSheetByName("FEIRANTES");
 
-.card {
-  background: white;
-  color: black;
-  border-radius: 16px;
-  padding: 15px;
-  margin-bottom: 15px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-}
+    // 🔐 EXTRATO COM SENHA
+    if (feiranteQR && !servidor) {
 
-h1 {
-  text-align: center;
-  margin-bottom: 15px;
-}
-
-#reader {
-  width: 100%;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-button {
-  width: 100%;
-  padding: 14px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.btn-servidor { background: #2563eb; color: white; }
-.btn-feirante { background: #9333ea; color: white; }
-.btn-pagar { background: #16a34a; color: white; }
-
-input {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  font-size: 16px;
-}
-
-.saldo {
-  font-size: 22px;
-  font-weight: bold;
-  text-align: center;
-  margin-top: 10px;
-}
-
-.nome {
-  text-align: center;
-  font-size: 16px;
-}
-
-#msg {
-  text-align: center;
-  margin-top: 10px;
-  font-weight: bold;
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<h1>💳 Vale Feira</h1>
-
-<div class="card">
-  <div id="reader"></div>
-
-  <button class="btn-servidor" onclick="lerServidor()">📷 Ler Servidor</button>
-  <button class="btn-feirante" onclick="lerFeirante()">📷 Ler Feirante</button>
-</div>
-
-<div class="card">
-  <div class="nome" id="nome">Nenhum servidor</div>
-  <div class="saldo" id="saldo">R$ 0,00</div>
-</div>
-
-<div class="card">
-  <input type="number" id="valor" placeholder="Valor (R$)">
-  <input type="text" id="feirante" placeholder="Feirante" readonly>
-
-  <button class="btn-pagar" onclick="pagar()">💰 Confirmar Pagamento</button>
-</div>
-
-<div id="msg"></div>
-
-</div>
-
-<script>
-
-// 🔗 COLE SUA URL DO APPS SCRIPT
-const API = "https://script.google.com/macros/s/AKfycbyJCYnf7AmIcu48kNYum37p4h0fcCy23lh16X1PHfTI4mq8ErulRSV1fOWs164JReFz/exec";
-
-let scanner = new Html5Qrcode("reader");
-let lendo = "";
-let servidor = "";
-
-// iniciar câmera
-function iniciar() {
-
-  scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    qr => {
-
-      if (lendo === "servidor") {
-        servidor = qr;
-        buscarServidor(qr);
-      }
-
-      if (lendo === "feirante") {
-        document.getElementById("feirante").value = qr;
-        setMsg("Feirante lido", "#9333ea");
-      }
-
-      scanner.stop();
+      return resposta(extratoFeirante(feiranteQR, senha, abaFeirantes, abaMov));
     }
-  );
+
+    var dados = abaServidores.getRange("A2:E").getValues();
+
+    var linha = -1;
+    var nome = "";
+    var saldoAtual = 0;
+    var secretaria = "";
+    var codigo = "";
+
+    for (var i = 0; i < dados.length; i++) {
+
+      var codigoPlanilha = limpar(dados[i][4]);
+
+      if (codigoPlanilha.includes(servidor)) {
+
+        linha = i + 2;
+        nome = dados[i][0];
+        saldoAtual = converterValor(dados[i][1]);
+        secretaria = dados[i][3];
+        codigo = dados[i][4];
+        break;
+      }
+    }
+
+    if (linha === -1) {
+      return resposta({ erro: "Servidor não encontrado" });
+    }
+
+    // 🔎 CONSULTA DE SALDO
+    if (!valor) {
+      return resposta({
+        nome: nome,
+        saldo: saldoAtual
+      });
+    }
+
+    if (saldoAtual < valor) {
+      return resposta({
+        erro: "Saldo insuficiente",
+        saldo: saldoAtual
+      });
+    }
+
+    var feirante = validarFeirante(feiranteQR, senha, abaFeirantes);
+
+    if (!feirante.valido) {
+      return resposta({ erro: feirante.erro });
+    }
+
+    var nomeFeirante = feirante.nome;
+
+    var novoSaldo = saldoAtual - valor;
+
+    abaServidores.getRange(linha, 2).setValue(novoSaldo);
+
+    abaMov.appendRow([
+      new Date(),
+      codigo,
+      valor,
+      nome,
+      secretaria,
+      nomeFeirante,
+      novoSaldo
+    ]);
+
+    return resposta({
+      sucesso: true,
+      nome: nome,
+      saldo: novoSaldo,
+      feirante: nomeFeirante
+    });
+
+  } catch (erro) {
+
+    return resposta({ erro: erro.message });
+
+  }
 }
 
-// botões
-function lerServidor() {
-  lendo = "servidor";
-  setMsg("Lendo servidor...");
-  iniciar();
-}
+//
+// 🔐 VALIDA FEIRANTE + SENHA
+//
+function validarFeirante(qr, senha, aba) {
 
-function lerFeirante() {
-  lendo = "feirante";
-  setMsg("Lendo feirante...");
-  iniciar();
-}
+  var dados = aba.getRange("A2:D").getValues();
 
-// busca dados
-function buscarServidor(cod) {
+  for (var i = 0; i < dados.length; i++) {
 
-  fetch(API + "?servidor=" + cod)
-    .then(r => r.json())
-    .then(data => {
+    var qrPlanilha = limpar(dados[i][1]);
+    var senhaPlanilha = limpar(dados[i][3]);
 
-      if (data.erro) {
-        setMsg(data.erro, "red");
-        return;
+    if (qrPlanilha === qr) {
+
+      if (!senha) {
+        return { valido: false, erro: "Informe a senha" };
       }
 
-      document.getElementById("nome").innerText = data.nome;
-      document.getElementById("saldo").innerText = "R$ " + data.saldo;
-
-      setMsg("Servidor carregado", "#16a34a");
-    });
-}
-
-// pagamento
-function pagar() {
-
-  let valor = document.getElementById("valor").value;
-  let feirante = document.getElementById("feirante").value;
-
-  if (!servidor) return alert("Leia o servidor");
-  if (!feirante) return alert("Leia o feirante");
-  if (!valor) return alert("Informe valor");
-
-  // resposta imediata
-  setMsg("Processando...", "#16a34a");
-
-  document.getElementById("valor").value = "";
-
-  fetch(API + "?servidor=" + servidor +
-        "&valor=" + valor +
-        "&feirante=" + encodeURIComponent(feirante))
-    .then(r => r.json())
-    .then(data => {
-
-      if (data.erro) {
-        setMsg(data.erro, "red");
-        return;
+      if (senhaPlanilha !== senha) {
+        return { valido: false, erro: "Senha inválida" };
       }
 
-      document.getElementById("saldo").innerText = "R$ " + data.saldo;
+      return {
+        valido: true,
+        nome: dados[i][0]
+      };
+    }
+  }
 
-      setMsg("✅ Pagamento realizado!", "#16a34a");
-
-    })
-    .catch(() => {
-      setMsg("Erro na conexão", "red");
-    });
+  return { valido: false, erro: "Feirante não encontrado" };
 }
 
-// mensagem
-function setMsg(txt, cor="white") {
-  let m = document.getElementById("msg");
-  m.innerText = txt;
-  m.style.color = cor;
+//
+// 📊 EXTRATO COM SENHA
+//
+function extratoFeirante(qr, senha, abaFeirantes, abaMov) {
+
+  var feirante = validarFeirante(qr, senha, abaFeirantes);
+
+  if (!feirante.valido) {
+    return { erro: feirante.erro };
+  }
+
+  var nomeFeirante = feirante.nome;
+
+  var dados = abaMov.getRange("A2:G").getValues();
+
+  var extrato = [];
+  var total = 0;
+
+  for (var i = 0; i < dados.length; i++) {
+
+    if (String(dados[i][5]).toUpperCase() === nomeFeirante.toUpperCase()) {
+
+      extrato.push({
+        data: dados[i][0],
+        servidor: dados[i][3],
+        valor: dados[i][2]
+      });
+
+      total += Number(dados[i][2]);
+    }
+  }
+
+  return {
+    feirante: nomeFeirante,
+    total: total,
+    quantidade: extrato.length,
+    extrato: extrato
+  };
 }
 
-</script>
+//
+// 🔧 LIMPEZA
+//
+function limpar(txt) {
+  return String(txt || "")
+    .trim()
+    .replace(/\n/g, "")
+    .replace(/\r/g, "")
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+}
 
-</body>
-</html>
+//
+// 💰 CONVERSÃO
+//
+function converterValor(valor) {
+
+  if (typeof valor === "number") return valor;
+
+  return parseFloat(
+    String(valor)
+      .replace("R$", "")
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .trim()
+  ) || 0;
+}
+
+//
+// 🔁 RESPOSTA
+//
+function resposta(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
