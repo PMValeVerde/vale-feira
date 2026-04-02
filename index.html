@@ -1,257 +1,91 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-body {
-  font-family: Arial;
-  background: linear-gradient(135deg, #2e7d32, #66bb6a);
-  margin: 0;
-}
-
-.box {
-  max-width: 450px;
-  margin: 20px auto;
-  background: white;
-  padding: 25px;
-  border-radius: 15px;
-  text-align: center;
-}
-
-h2 { font-size: 28px; }
-
-button {
-  width: 100%;
-  padding: 18px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 10px;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.b1 { background: #1976d2; color: white; }
-.b2 { background: #8e24aa; color: white; }
-.b3 { background: #2e7d32; color: white; }
-
-input {
-  width: 100%;
-  padding: 18px;
-  margin-top: 10px;
-  border-radius: 10px;
-  font-size: 18px;
-  text-align: center;
-}
-
-#status {
-  margin-top: 15px;
-  font-size: 20px;
-  font-weight: bold;
-  white-space: pre-line;
-}
-
-#reader {
-  margin-top: 15px;
-}
-</style>
+  <title>Vale Feira</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: Arial; text-align: center; }
+    #reader { width: 300px; margin: auto; }
+    input, button { padding: 10px; margin: 5px; width: 200px; }
+  </style>
 </head>
-
 <body>
 
-<div class="box">
+<h2>💳 Vale Feira</h2>
 
-<h2>🧺 VALE-FEIRA DIGITAL</h2>
-
-<button class="b1" onclick="abrirScanner('servidor')">📷 LER SERVIDOR</button>
-<input id="servidor" placeholder="Código do servidor">
-
-<button class="b2" onclick="abrirScanner('feirante')">📷 LER FEIRANTE</button>
-<input id="feirante" placeholder="Código do feirante">
-
-<input type="number" id="valor" placeholder="VALOR R$">
-
-<button class="b3" onclick="registrar()">✅ CONFIRMAR</button>
-
-<div id="status"></div>
 <div id="reader"></div>
 
-</div>
+<p id="nome"></p>
+<p id="saldo"></p>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+<input type="number" id="valor" placeholder="Valor (R$)">
+<input type="text" id="feirante" placeholder="Nome do feirante">
+
+<br>
+<button onclick="pagar()">Confirmar Pagamento</button>
+
+<p id="msg"></p>
 
 <script>
 
-let api = "https://script.google.com/macros/s/AKfycbz4sQIhiyZ1baqhwCMw7QHxry3zJrbJmG6Evt4GzP0WUUSFtQGorOm1QCoIO7Vq4AfY/exec";
+let servidor = "";
+const API = "COLE_SUA_URL_AQUI";
 
-let codServidor = "";
-let codFeirante = "";
+function onScanSuccess(decodedText) {
 
-// 🔊 SOM
-function beep(freq){
-  let ctx = new (window.AudioContext || window.webkitAudioContext)();
-  let osc = ctx.createOscillator();
-  osc.frequency.value = freq;
-  osc.connect(ctx.destination);
-  osc.start();
-  setTimeout(()=>osc.stop(), 150);
-}
+  servidor = decodedText;
 
-// 📳 VIBRAÇÃO
-function vibrar(){
-  if (navigator.vibrate) navigator.vibrate(200);
-}
+  document.getElementById("msg").innerText = "Consultando...";
 
-// 📷 SCANNER DEFINITIVO
-function abrirScanner(tipo){
+  fetch(API + "?servidor=" + encodeURIComponent(servidor))
+    .then(r => r.json())
+    .then(data => {
 
-  const html5QrCode = new Html5Qrcode("reader");
-
-  document.getElementById("reader").innerHTML = "";
-
-  html5QrCode.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    async (qr) => {
-
-      // 🔥 PARA E LIMPA IMEDIATAMENTE
-      await html5QrCode.stop();
-      await html5QrCode.clear();
-
-      document.getElementById("reader").innerHTML = "";
-
-      if (tipo === "servidor"){
-        codServidor = qr;
-        document.getElementById("servidor").value = qr;
-        document.getElementById("status").innerText = "✅ SERVIDOR OK";
-      } else {
-        codFeirante = qr;
-        document.getElementById("feirante").value = qr;
-        document.getElementById("status").innerText = "✅ FEIRANTE OK";
+      if (data.erro) {
+        document.getElementById("msg").innerText = data.erro;
+        return;
       }
 
-      beep(800);
-      vibrar();
-    },
-    (err) => {}
-  ).catch(async () => {
+      document.getElementById("nome").innerText = "👤 " + data.nome;
+      document.getElementById("saldo").innerText = "💰 Saldo: R$ " + data.saldo;
+      document.getElementById("msg").innerText = "Pronto para pagamento";
 
-    document.getElementById("status").innerText = "⚠️ Tentando outra câmera...";
-
-    const devices = await Html5Qrcode.getCameras();
-
-    if (!devices.length){
-      document.getElementById("status").innerText = "❌ Sem câmera";
-      return;
-    }
-
-    let cameraId = devices[devices.length - 1].id;
-
-    html5QrCode.start(
-      cameraId,
-      { fps: 10, qrbox: 250 },
-      async (qr) => {
-
-        await html5QrCode.stop();
-        await html5QrCode.clear();
-
-        document.getElementById("reader").innerHTML = "";
-
-        if (tipo === "servidor"){
-          codServidor = qr;
-          document.getElementById("servidor").value = qr;
-        } else {
-          codFeirante = qr;
-          document.getElementById("feirante").value = qr;
-        }
-
-        document.getElementById("status").innerText = "✅ LEITURA OK";
-
-        beep(800);
-        vibrar();
-      }
-    );
-
-  });
+    });
 }
 
-// 💰 REGISTRO SEM TRAVAR
-async function registrar(){
+function pagar() {
 
   let valor = document.getElementById("valor").value;
+  let feirante = document.getElementById("feirante").value;
 
-  if (!codServidor) codServidor = document.getElementById("servidor").value;
-  if (!codFeirante) codFeirante = document.getElementById("feirante").value;
-
-  if (!codServidor || !codFeirante || !valor){
-    alert("Preencha todos os campos");
+  if (!servidor) {
+    alert("Leia o QR Code primeiro");
     return;
   }
 
-  document.getElementById("status").innerText = "⏳ Processando...";
+  fetch(API + "?servidor=" + servidor +
+        "&valor=" + valor +
+        "&feirante=" + encodeURIComponent(feirante))
+    .then(r => r.json())
+    .then(data => {
 
-  try {
+      if (data.erro) {
+        document.getElementById("msg").innerText = data.erro;
+        return;
+      }
 
-    let url = api + "?servidor=" + encodeURIComponent(codServidor)
-                    + "&valor=" + encodeURIComponent(valor)
-                    + "&feirante=" + encodeURIComponent(codFeirante);
+      document.getElementById("saldo").innerText = "💰 Novo saldo: R$ " + data.saldo;
+      document.getElementById("msg").innerText = "✅ Pagamento realizado";
 
-    let resposta = await fetch(url);
-
-    let texto = await resposta.text();
-
-    let res;
-    try {
-      res = JSON.parse(texto);
-    } catch(e){
-      throw new Error("Resposta inválida");
-    }
-
-    if (res.erro){
-      document.getElementById("status").innerText = "❌ " + res.erro;
-      beep(200);
-      return;
-    }
-
-    document.getElementById("status").innerText =
-      "✅ COMPRA REALIZADA\nSaldo: R$ " + res.saldo;
-
-    beep(800);
-    vibrar();
-
-    // 🔄 LIMPA CAMPOS
-    codServidor = "";
-    codFeirante = "";
-    document.getElementById("valor").value = "";
-    document.getElementById("servidor").value = "";
-    document.getElementById("feirante").value = "";
-
-  } catch (erro){
-
-    document.getElementById("status").innerText =
-      "❌ Erro de conexão ou servidor";
-
-    beep(200);
-    console.error(erro);
-  }
+    });
 }
 
-// 🔗 AUTO PREENCHIMENTO
-window.onload = function(){
-
-  let params = new URLSearchParams(window.location.search);
-
-  if (params.get("servidor")){
-    codServidor = params.get("servidor");
-    document.getElementById("servidor").value = codServidor;
-  }
-
-  if (params.get("feirante")){
-    codFeirante = params.get("feirante");
-    document.getElementById("feirante").value = codFeirante;
-  }
-
-}
+const html5QrCode = new Html5Qrcode("reader");
+html5QrCode.start(
+  { facingMode: "environment" },
+  { fps: 10, qrbox: 250 },
+  onScanSuccess
+);
 
 </script>
 
