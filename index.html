@@ -12,41 +12,25 @@ body {
   font-family: Arial;
   background: #0f172a;
   color: white;
+  text-align: center;
 }
 
 header {
   background: #16a34a;
   padding: 15px;
-  text-align: center;
   font-size: 20px;
   font-weight: bold;
 }
 
-#reader {
-  width: 100%;
-  max-width: 350px;
-  margin: 15px auto;
-  border-radius: 10px;
-  overflow: hidden;
+.container {
+  padding: 15px;
 }
 
 .card {
   background: #1e293b;
-  margin: 10px;
   padding: 15px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.nome {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.saldo {
-  font-size: 26px;
-  color: #22c55e;
-  margin-top: 5px;
+  border-radius: 10px;
+  margin: 10px;
 }
 
 input {
@@ -60,46 +44,62 @@ input {
 
 button {
   width: 90%;
-  padding: 16px;
-  margin: 10px;
+  padding: 15px;
+  margin: 8px;
   border-radius: 10px;
   border: none;
-  font-size: 18px;
-  background: #22c55e;
-  color: white;
+  font-size: 16px;
   font-weight: bold;
 }
 
-button:active {
-  background: #15803d;
+.btn-scan {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-pagar {
+  background: #22c55e;
+  color: white;
+  font-size: 18px;
+}
+
+#reader {
+  width: 100%;
+  max-width: 300px;
+  margin: auto;
+  display: none;
 }
 
 #msg {
-  text-align: center;
   margin: 10px;
   font-weight: bold;
 }
-
 </style>
+
 </head>
 
 <body>
 
 <header>💳 Vale Feira</header>
 
-<div id="reader"></div>
+<div class="container">
 
-<div class="card">
-  <div class="nome" id="nome">Aguardando leitura...</div>
-  <div class="saldo" id="saldo"></div>
+  <button class="btn-scan" onclick="abrirCamera()">📷 Ler QR Code</button>
+
+  <div id="reader"></div>
+
+  <div class="card">
+    <input type="text" id="servidor" placeholder="Servidor" readonly>
+    <input type="text" id="nome" placeholder="Nome" readonly>
+    <input type="number" id="valor" placeholder="Valor (R$)">
+    <input type="text" id="feirante" placeholder="Nome do feirante">
+  </div>
+
+  <button class="btn-pagar" onclick="pagar()">CONFIRMAR PAGAMENTO</button>
+
+  <div id="msg"></div>
+
 </div>
-
-<input type="number" id="valor" placeholder="💰 Valor (R$)">
-<input type="text" id="feirante" placeholder="🏪 Nome do feirante">
-
-<button onclick="pagar()">CONFIRMAR PAGAMENTO</button>
-
-<div id="msg"></div>
 
 <audio id="ok" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
 <audio id="erro" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
@@ -108,8 +108,8 @@ button:active {
 
 const API = "COLE_SUA_URL_AQUI";
 
-let servidor = "";
 let processando = false;
+let qr;
 
 function setMsg(msg, cor="white") {
   let el = document.getElementById("msg");
@@ -125,15 +125,35 @@ function somErro() {
   document.getElementById("erro").play();
 }
 
+function abrirCamera() {
+
+  document.getElementById("reader").style.display = "block";
+
+  qr = new Html5Qrcode("reader");
+
+  Html5Qrcode.getCameras().then(cameras => {
+
+    let traseira = cameras.find(c => c.label.toLowerCase().includes("back"));
+    let cameraId = traseira ? traseira.id : cameras[0].id;
+
+    qr.start(
+      cameraId,
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
+
+  });
+}
+
 function onScanSuccess(decodedText) {
 
-  if (processando) return;
+  qr.stop();
 
-  servidor = decodedText;
+  document.getElementById("servidor").value = decodedText;
 
   setMsg("Consultando...", "#38bdf8");
 
-  fetch(API + "?servidor=" + encodeURIComponent(servidor))
+  fetch(API + "?servidor=" + encodeURIComponent(decodedText))
     .then(r => r.json())
     .then(data => {
 
@@ -143,10 +163,9 @@ function onScanSuccess(decodedText) {
         return;
       }
 
-      document.getElementById("nome").innerText = data.nome;
-      document.getElementById("saldo").innerText = "R$ " + data.saldo;
+      document.getElementById("nome").value = data.nome;
 
-      setMsg("Pronto para pagamento", "#22c55e");
+      setMsg("Saldo: R$ " + data.saldo, "#22c55e");
       somOK();
 
     })
@@ -160,11 +179,12 @@ function pagar() {
 
   if (processando) return;
 
+  let servidor = document.getElementById("servidor").value;
   let valor = document.getElementById("valor").value;
   let feirante = document.getElementById("feirante").value;
 
   if (!servidor) {
-    alert("Leia o QR primeiro");
+    alert("Leia o QR Code");
     return;
   }
 
@@ -191,9 +211,7 @@ function pagar() {
         return;
       }
 
-      document.getElementById("saldo").innerText = "R$ " + data.saldo;
-
-      setMsg("✅ Pagamento realizado", "#22c55e");
+      setMsg("✅ Pagamento realizado | Saldo: R$ " + data.saldo, "#22c55e");
       somOK();
 
     })
@@ -203,29 +221,6 @@ function pagar() {
       somErro();
     });
 }
-
-function iniciarCamera() {
-
-  Html5Qrcode.getCameras().then(cameras => {
-
-    let traseira = cameras.find(c => c.label.toLowerCase().includes("back"));
-
-    let cameraId = traseira ? traseira.id : cameras[0].id;
-
-    const qr = new Html5Qrcode("reader");
-
-    qr.start(
-      cameraId,
-      { fps: 10, qrbox: 250 },
-      onScanSuccess
-    );
-
-  }).catch(() => {
-    setMsg("Erro ao abrir câmera", "red");
-  });
-}
-
-iniciarCamera();
 
 </script>
 
