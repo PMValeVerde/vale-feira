@@ -1,67 +1,145 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Vale Feira</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body { font-family: Arial; text-align: center; }
-    #reader { width: 300px; margin: auto; }
-    input, button { padding: 10px; margin: 5px; width: 200px; }
-  </style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vale Feira</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #f5f5f5;
+}
+
+#reader {
+  width: 300px;
+  margin: auto;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  margin: 10px;
+  border-radius: 10px;
+}
+
+input, button {
+  padding: 12px;
+  margin: 5px;
+  width: 80%;
+  font-size: 16px;
+}
+
+button {
+  background: green;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+
+#msg {
+  font-weight: bold;
+}
+</style>
+
 </head>
+
 <body>
 
 <h2>💳 Vale Feira</h2>
 
 <div id="reader"></div>
 
-<p id="nome"></p>
-<p id="saldo"></p>
+<div class="card">
+  <p id="nome"></p>
+  <p id="saldo"></p>
+</div>
 
-<input type="number" id="valor" placeholder="Valor (R$)">
+<input type="number" id="valor" placeholder="Valor R$">
 <input type="text" id="feirante" placeholder="Nome do feirante">
 
 <br>
-<button onclick="pagar()">Confirmar Pagamento</button>
+<button onclick="pagar()">CONFIRMAR PAGAMENTO</button>
 
 <p id="msg"></p>
 
+<audio id="ok" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="erro" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+
 <script>
 
-let servidor = "";
 const API = "COLE_SUA_URL_AQUI";
+
+let servidor = "";
+let processando = false;
+
+function somOK() {
+  document.getElementById("ok").play();
+}
+
+function somErro() {
+  document.getElementById("erro").play();
+}
+
+function setMsg(msg, cor="black") {
+  let el = document.getElementById("msg");
+  el.innerText = msg;
+  el.style.color = cor;
+}
 
 function onScanSuccess(decodedText) {
 
+  if (processando) return;
+
   servidor = decodedText;
 
-  document.getElementById("msg").innerText = "Consultando...";
+  setMsg("Consultando...", "blue");
 
   fetch(API + "?servidor=" + encodeURIComponent(servidor))
     .then(r => r.json())
     .then(data => {
 
       if (data.erro) {
-        document.getElementById("msg").innerText = data.erro;
+        setMsg(data.erro, "red");
+        somErro();
         return;
       }
 
       document.getElementById("nome").innerText = "👤 " + data.nome;
       document.getElementById("saldo").innerText = "💰 Saldo: R$ " + data.saldo;
-      document.getElementById("msg").innerText = "Pronto para pagamento";
 
+      setMsg("Pronto para pagamento", "green");
+      somOK();
+
+    })
+    .catch(() => {
+      setMsg("Erro de conexão", "red");
+      somErro();
     });
 }
 
 function pagar() {
 
+  if (processando) return;
+
   let valor = document.getElementById("valor").value;
   let feirante = document.getElementById("feirante").value;
 
   if (!servidor) {
-    alert("Leia o QR Code primeiro");
+    alert("Leia o QR primeiro");
     return;
   }
+
+  if (!valor || valor <= 0) {
+    alert("Informe o valor");
+    return;
+  }
+
+  processando = true;
+
+  setMsg("Processando...", "blue");
 
   fetch(API + "?servidor=" + servidor +
         "&valor=" + valor +
@@ -69,23 +147,49 @@ function pagar() {
     .then(r => r.json())
     .then(data => {
 
+      processando = false;
+
       if (data.erro) {
-        document.getElementById("msg").innerText = data.erro;
+        setMsg(data.erro, "red");
+        somErro();
         return;
       }
 
       document.getElementById("saldo").innerText = "💰 Novo saldo: R$ " + data.saldo;
-      document.getElementById("msg").innerText = "✅ Pagamento realizado";
 
+      setMsg("✅ Pagamento realizado", "green");
+      somOK();
+
+    })
+    .catch(() => {
+      processando = false;
+      setMsg("Erro ao processar", "red");
+      somErro();
     });
 }
 
-const html5QrCode = new Html5Qrcode("reader");
-html5QrCode.start(
-  { facingMode: "environment" },
-  { fps: 10, qrbox: 250 },
-  onScanSuccess
-);
+function iniciarCamera() {
+
+  Html5Qrcode.getCameras().then(cameras => {
+
+    let traseira = cameras.find(c => c.label.toLowerCase().includes("back"));
+
+    let cameraId = traseira ? traseira.id : cameras[0].id;
+
+    const qr = new Html5Qrcode("reader");
+
+    qr.start(
+      cameraId,
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
+
+  }).catch(() => {
+    setMsg("Erro ao abrir câmera", "red");
+  });
+}
+
+iniciarCamera();
 
 </script>
 
