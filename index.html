@@ -7,58 +7,64 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
+
 body {
-  background: #111;
-  color: white;
+  background: #000;
+  color: #00ff88;
   font-family: Arial;
   text-align: center;
+  margin: 0;
 }
 
 .box {
-  max-width: 320px;
+  max-width: 400px;
   margin: auto;
   padding: 20px;
 }
 
-h2 {
-  color: #22c55e;
+h1 {
+  font-size: 40px;
+  margin-bottom: 10px;
 }
 
 #reader {
-  width: 250px;
+  width: 280px;
   margin: auto;
 }
 
 .display {
   background: #000;
-  padding: 15px;
-  border-radius: 10px;
-  margin: 10px 0;
-  min-height: 80px;
+  border: 3px solid #00ff88;
+  padding: 20px;
+  border-radius: 12px;
+  margin: 15px 0;
+  font-size: 28px;
+  min-height: 120px;
 }
 
 input {
   width: 100%;
-  padding: 15px;
-  font-size: 18px;
+  padding: 20px;
+  font-size: 26px;
   text-align: center;
   border-radius: 10px;
   border: none;
+  margin-bottom: 10px;
 }
 
 button {
   width: 100%;
-  padding: 15px;
+  padding: 20px;
   margin-top: 10px;
-  font-size: 16px;
+  font-size: 22px;
   border-radius: 10px;
   border: none;
   cursor: pointer;
 }
 
-.green { background: #22c55e; color: black; }
-.blue { background: #3b82f6; color: white; }
-.gray { background: #444; color: white; }
+.green { background: #00ff88; color: black; }
+.blue { background: #2563eb; color: white; }
+.gray { background: #333; color: white; }
 
 </style>
 </head>
@@ -67,26 +73,26 @@ button {
 
 <div class="box">
 
-<h2>💳 Vale Feira</h2>
+<h1>💳 VALE FEIRA</h1>
 
 <div id="reader"></div>
 
-<div class="display" id="tela">
-Aguardando leitura...
+<div id="tela" class="display">
+AGUARDANDO...
 </div>
 
-<input type="number" id="valor" placeholder="R$ 0,00">
+<input type="number" id="valor" placeholder="DIGITE O VALOR">
 
-<button class="blue" onclick="lerServidor()">📷 Ler Servidor</button>
-<button class="gray" onclick="lerFeirante()">🧑‍🌾 Ler Feirante</button>
-<button class="green" onclick="pagar()">💰 Confirmar</button>
-<button class="gray" onclick="extrato()">📄 Extrato</button>
+<button class="blue" onclick="lerServidor()">LER SERVIDOR</button>
+<button class="gray" onclick="lerFeirante()">LER FEIRANTE</button>
+<button class="green" onclick="pagar()">CONFIRMAR</button>
+<button class="gray" onclick="extrato()">EXTRATO</button>
 
 </div>
 
 <script>
 
-// 🔗 SUA URL
+// 🔗 COLE SUA URL AQUI
 const URL = "https://script.google.com/macros/s/AKfycbyjqDoYn7z7-twvHfbdt7cVUgMiYaWbbA_dlK7c3RzTHd6CBUrS1J7wXaNKQB9goSfG/exec";
 
 let servidor = "";
@@ -94,9 +100,10 @@ let feirante = "";
 let senha = "";
 
 // =========================
-// 📷 LER SERVIDOR
+// LER SERVIDOR
 // =========================
 function lerServidor() {
+
   scan((codigo) => {
 
     servidor = codigo;
@@ -106,33 +113,36 @@ function lerServidor() {
     .then(d => {
 
       if (d.erro) {
-        tela(d.erro);
+        tela("ERRO");
         return;
       }
 
       tela(`
-        👤 ${d.nome}<br>
-        🏢 ${d.secretaria}<br>
-        💰 Saldo: R$ ${d.saldo.toFixed(2)}
+        ${d.nome}<br>
+        ${d.secretaria}<br>
+        SALDO: R$ ${d.saldo.toFixed(2)}
       `);
+
     });
 
   });
 }
 
 // =========================
-// 📷 LER FEIRANTE
+// LER FEIRANTE
 // =========================
 function lerFeirante() {
+
   scan((codigo) => {
     feirante = codigo;
-    senha = prompt("Senha do feirante:");
-    tela("Feirante identificado ✅");
+    senha = prompt("SENHA:");
+    tela("FEIRANTE OK");
   });
+
 }
 
 // =========================
-// 💰 PAGAR
+// PAGAR
 // =========================
 function pagar() {
 
@@ -143,21 +153,23 @@ function pagar() {
   .then(d => {
 
     if (d.erro) {
-      tela("❌ " + d.erro);
+      tela("ERRO: " + d.erro);
       return;
     }
 
-    tela(`✅ Pago<br>Saldo: R$ ${d.saldo.toFixed(2)}`);
+    tela(`PAGO<br>SALDO: R$ ${d.saldo.toFixed(2)}`);
+
   });
+
 }
 
 // =========================
-// 📄 EXTRATO (CORRIGIDO)
+// EXTRATO
 // =========================
 function extrato() {
 
   if (!feirante) {
-    alert("Leia o QR do feirante primeiro!");
+    alert("Leia o feirante");
     return;
   }
 
@@ -170,20 +182,22 @@ function extrato() {
       return;
     }
 
-    let html = "📄 Últimas vendas:<br><br>";
+    let html = "VENDAS:<br><br>";
 
     d.extrato.forEach(e => {
-      html += `${e.data} - R$ ${e.valor}<br>`;
+      html += `R$ ${e.valor}<br>`;
     });
 
-    html += `<br>💰 Total hoje: R$ ${d.totalHoje.toFixed(2)}`;
+    html += `<br>TOTAL: R$ ${d.totalHoje.toFixed(2)}`;
 
     tela(html);
+
   });
+
 }
 
 // =========================
-// 📷 SCANNER
+// SCANNER
 // =========================
 function scan(callback) {
 
@@ -193,7 +207,7 @@ function scan(callback) {
 
   qr.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: 200 },
+    { fps: 10, qrbox: 220 },
     (text) => {
       qr.stop();
       callback(text);
@@ -202,7 +216,7 @@ function scan(callback) {
 }
 
 // =========================
-// 📺 DISPLAY
+// TELA
 // =========================
 function tela(msg) {
   document.getElementById("tela").innerHTML = msg;
