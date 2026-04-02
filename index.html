@@ -8,62 +8,98 @@
 
 <style>
 body {
+  margin: 0;
   font-family: Arial;
+  background: #0f172a;
+  color: white;
+}
+
+header {
+  background: #16a34a;
+  padding: 15px;
   text-align: center;
-  background: #f5f5f5;
+  font-size: 20px;
+  font-weight: bold;
 }
 
 #reader {
-  width: 300px;
-  margin: auto;
+  width: 100%;
+  max-width: 350px;
+  margin: 15px auto;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .card {
-  background: white;
-  padding: 15px;
+  background: #1e293b;
   margin: 10px;
-  border-radius: 10px;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
 }
 
-input, button {
-  padding: 12px;
-  margin: 5px;
-  width: 80%;
+.nome {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.saldo {
+  font-size: 26px;
+  color: #22c55e;
+  margin-top: 5px;
+}
+
+input {
+  width: 90%;
+  padding: 14px;
+  margin: 8px;
+  border-radius: 8px;
+  border: none;
   font-size: 16px;
 }
 
 button {
-  background: green;
-  color: white;
+  width: 90%;
+  padding: 16px;
+  margin: 10px;
+  border-radius: 10px;
   border: none;
-  border-radius: 5px;
+  font-size: 18px;
+  background: #22c55e;
+  color: white;
+  font-weight: bold;
+}
+
+button:active {
+  background: #15803d;
 }
 
 #msg {
+  text-align: center;
+  margin: 10px;
   font-weight: bold;
 }
-</style>
 
+</style>
 </head>
 
 <body>
 
-<h2>💳 Vale Feira</h2>
+<header>💳 Vale Feira</header>
 
 <div id="reader"></div>
 
 <div class="card">
-  <p id="nome"></p>
-  <p id="saldo"></p>
+  <div class="nome" id="nome">Aguardando leitura...</div>
+  <div class="saldo" id="saldo"></div>
 </div>
 
-<input type="number" id="valor" placeholder="Valor R$">
-<input type="text" id="feirante" placeholder="Nome do feirante">
+<input type="number" id="valor" placeholder="💰 Valor (R$)">
+<input type="text" id="feirante" placeholder="🏪 Nome do feirante">
 
-<br>
 <button onclick="pagar()">CONFIRMAR PAGAMENTO</button>
 
-<p id="msg"></p>
+<div id="msg"></div>
 
 <audio id="ok" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
 <audio id="erro" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
@@ -75,6 +111,12 @@ const API = "COLE_SUA_URL_AQUI";
 let servidor = "";
 let processando = false;
 
+function setMsg(msg, cor="white") {
+  let el = document.getElementById("msg");
+  el.innerText = msg;
+  el.style.color = cor;
+}
+
 function somOK() {
   document.getElementById("ok").play();
 }
@@ -83,19 +125,13 @@ function somErro() {
   document.getElementById("erro").play();
 }
 
-function setMsg(msg, cor="black") {
-  let el = document.getElementById("msg");
-  el.innerText = msg;
-  el.style.color = cor;
-}
-
 function onScanSuccess(decodedText) {
 
   if (processando) return;
 
   servidor = decodedText;
 
-  setMsg("Consultando...", "blue");
+  setMsg("Consultando...", "#38bdf8");
 
   fetch(API + "?servidor=" + encodeURIComponent(servidor))
     .then(r => r.json())
@@ -107,10 +143,10 @@ function onScanSuccess(decodedText) {
         return;
       }
 
-      document.getElementById("nome").innerText = "👤 " + data.nome;
-      document.getElementById("saldo").innerText = "💰 Saldo: R$ " + data.saldo;
+      document.getElementById("nome").innerText = data.nome;
+      document.getElementById("saldo").innerText = "R$ " + data.saldo;
 
-      setMsg("Pronto para pagamento", "green");
+      setMsg("Pronto para pagamento", "#22c55e");
       somOK();
 
     })
@@ -139,7 +175,7 @@ function pagar() {
 
   processando = true;
 
-  setMsg("Processando...", "blue");
+  setMsg("Processando...", "#38bdf8");
 
   fetch(API + "?servidor=" + servidor +
         "&valor=" + valor +
@@ -155,9 +191,9 @@ function pagar() {
         return;
       }
 
-      document.getElementById("saldo").innerText = "💰 Novo saldo: R$ " + data.saldo;
+      document.getElementById("saldo").innerText = "R$ " + data.saldo;
 
-      setMsg("✅ Pagamento realizado", "green");
+      setMsg("✅ Pagamento realizado", "#22c55e");
       somOK();
 
     })
