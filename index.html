@@ -106,17 +106,19 @@ button {
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbyJCYnf7AmIcu48kNYum37p4h0fcCy23lh16X1PHfTI4mq8ErulRSV1fOWs164JReFz/exec";
+const API = "COLE_AQUI_SUA_URL_DO_APPS_SCRIPT";
 
 let processando = false;
 let qr;
 
+// mensagens
 function setMsg(msg, cor="white") {
   let el = document.getElementById("msg");
   el.innerText = msg;
   el.style.color = cor;
 }
 
+// sons
 function somOK() {
   document.getElementById("ok").play();
 }
@@ -125,6 +127,7 @@ function somErro() {
   document.getElementById("erro").play();
 }
 
+// abrir câmera
 function abrirCamera() {
 
   document.getElementById("reader").style.display = "block";
@@ -142,18 +145,28 @@ function abrirCamera() {
       onScanSuccess
     );
 
+  }).catch(() => {
+    setMsg("Erro ao abrir câmera", "red");
   });
 }
 
+// leitura do QR
 function onScanSuccess(decodedText) {
 
   qr.stop();
 
-  document.getElementById("servidor").value = decodedText;
+  // 🔥 corrige QR com URL
+  let servidor = decodedText;
+
+  if (decodedText.includes("servidor=")) {
+    servidor = decodedText.split("servidor=")[1];
+  }
+
+  document.getElementById("servidor").value = servidor;
 
   setMsg("Consultando...", "#38bdf8");
 
-  fetch(API + "?servidor=" + encodeURIComponent(decodedText))
+  fetch(API + "?servidor=" + encodeURIComponent(servidor))
     .then(r => r.json())
     .then(data => {
 
@@ -175,6 +188,7 @@ function onScanSuccess(decodedText) {
     });
 }
 
+// pagamento
 function pagar() {
 
   if (processando) return;
@@ -213,6 +227,10 @@ function pagar() {
 
       setMsg("✅ Pagamento realizado | Saldo: R$ " + data.saldo, "#22c55e");
       somOK();
+
+      // limpa campos
+      document.getElementById("valor").value = "";
+      document.getElementById("feirante").value = "";
 
     })
     .catch(() => {
