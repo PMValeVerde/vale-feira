@@ -10,52 +10,76 @@
 
 <style>
 body {
-  font-family: Arial;
-  background: #f3f4f6;
-  text-align: center;
   margin: 0;
+  font-family: Arial;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  color: white;
 }
 
 .container {
-  max-width: 400px;
+  max-width: 420px;
   margin: auto;
   padding: 20px;
 }
 
+.card {
+  background: white;
+  color: black;
+  border-radius: 16px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
 h1 {
-  margin-bottom: 10px;
+  text-align: center;
+  margin-bottom: 15px;
 }
 
 #reader {
   width: 100%;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
-input {
-  width: 90%;
-  padding: 12px;
-  margin: 8px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
 button {
-  width: 90%;
+  width: 100%;
   padding: 14px;
-  margin: 8px;
-  font-size: 16px;
+  margin-top: 10px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: bold;
   cursor: pointer;
 }
 
-.btn1 { background: #2563eb; color: white; }
-.btn2 { background: #9333ea; color: white; }
-.btn3 { background: #16a34a; color: white; }
+.btn-servidor { background: #2563eb; color: white; }
+.btn-feirante { background: #9333ea; color: white; }
+.btn-pagar { background: #16a34a; color: white; }
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+.saldo {
+  font-size: 22px;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.nome {
+  text-align: center;
+  font-size: 16px;
+}
 
 #msg {
+  text-align: center;
   margin-top: 10px;
   font-weight: bold;
 }
@@ -68,15 +92,24 @@ button {
 
 <h1>💳 Vale Feira</h1>
 
-<div id="reader"></div>
+<div class="card">
+  <div id="reader"></div>
 
-<button class="btn1" onclick="lerServidor()">📷 Ler Servidor</button>
-<button class="btn2" onclick="lerFeirante()">📷 Ler Feirante</button>
+  <button class="btn-servidor" onclick="lerServidor()">📷 Ler Servidor</button>
+  <button class="btn-feirante" onclick="lerFeirante()">📷 Ler Feirante</button>
+</div>
 
-<input type="number" id="valor" placeholder="Valor (R$)">
-<input type="text" id="feirante" placeholder="Nome do feirante" readonly>
+<div class="card">
+  <div class="nome" id="nome">Nenhum servidor</div>
+  <div class="saldo" id="saldo">R$ 0,00</div>
+</div>
 
-<button class="btn3" onclick="pagar()">💰 Confirmar Pagamento</button>
+<div class="card">
+  <input type="number" id="valor" placeholder="Valor (R$)">
+  <input type="text" id="feirante" placeholder="Feirante" readonly>
+
+  <button class="btn-pagar" onclick="pagar()">💰 Confirmar Pagamento</button>
+</div>
 
 <div id="msg"></div>
 
@@ -84,17 +117,15 @@ button {
 
 <script>
 
-// 🔗 COLE AQUI SUA URL DO APPS SCRIPT
+// 🔗 COLE SUA URL DO APPS SCRIPT
 const API = "https://script.google.com/macros/s/AKfycbyJCYnf7AmIcu48kNYum37p4h0fcCy23lh16X1PHfTI4mq8ErulRSV1fOWs164JReFz/exec";
 
-// variáveis
+let scanner = new Html5Qrcode("reader");
 let lendo = "";
 let servidor = "";
 
-// leitor QR
-let scanner = new Html5Qrcode("reader");
-
-function iniciarLeitor() {
+// iniciar câmera
+function iniciar() {
 
   scanner.start(
     { facingMode: "environment" },
@@ -103,17 +134,15 @@ function iniciarLeitor() {
 
       if (lendo === "servidor") {
         servidor = qr;
-        setMsg("Servidor lido ✅", "#2563eb");
         buscarServidor(qr);
       }
 
       if (lendo === "feirante") {
         document.getElementById("feirante").value = qr;
-        setMsg("Feirante lido ✅", "#9333ea");
+        setMsg("Feirante lido", "#9333ea");
       }
 
       scanner.stop();
-
     }
   );
 }
@@ -121,17 +150,17 @@ function iniciarLeitor() {
 // botões
 function lerServidor() {
   lendo = "servidor";
-  setMsg("Aponte para o QR do servidor...");
-  iniciarLeitor();
+  setMsg("Lendo servidor...");
+  iniciar();
 }
 
 function lerFeirante() {
   lendo = "feirante";
-  setMsg("Aponte para o QR do feirante...");
-  iniciarLeitor();
+  setMsg("Lendo feirante...");
+  iniciar();
 }
 
-// consulta servidor
+// busca dados
 function buscarServidor(cod) {
 
   fetch(API + "?servidor=" + cod)
@@ -143,23 +172,25 @@ function buscarServidor(cod) {
         return;
       }
 
-      setMsg("👤 " + data.nome + " | Saldo: R$ " + data.saldo, "#16a34a");
+      document.getElementById("nome").innerText = data.nome;
+      document.getElementById("saldo").innerText = "R$ " + data.saldo;
 
+      setMsg("Servidor carregado", "#16a34a");
     });
 }
 
-// pagamento (rápido)
+// pagamento
 function pagar() {
 
   let valor = document.getElementById("valor").value;
   let feirante = document.getElementById("feirante").value;
 
-  if (!servidor) return alert("Leia o QR do servidor");
-  if (!feirante) return alert("Leia o QR do feirante");
-  if (!valor || valor <= 0) return alert("Informe o valor");
+  if (!servidor) return alert("Leia o servidor");
+  if (!feirante) return alert("Leia o feirante");
+  if (!valor) return alert("Informe valor");
 
-  // ⚡ resposta imediata
-  setMsg("Processando pagamento...", "#16a34a");
+  // resposta imediata
+  setMsg("Processando...", "#16a34a");
 
   document.getElementById("valor").value = "";
 
@@ -174,7 +205,9 @@ function pagar() {
         return;
       }
 
-      setMsg("✅ Pago! Saldo: R$ " + data.saldo, "#16a34a");
+      document.getElementById("saldo").innerText = "R$ " + data.saldo;
+
+      setMsg("✅ Pagamento realizado!", "#16a34a");
 
     })
     .catch(() => {
@@ -183,16 +216,12 @@ function pagar() {
 }
 
 // mensagem
-function setMsg(texto, cor="black") {
-  let msg = document.getElementById("msg");
-  msg.innerText = texto;
-  msg.style.color = cor;
+function setMsg(txt, cor="white") {
+  let m = document.getElementById("msg");
+  m.innerText = txt;
+  m.style.color = cor;
 }
 
-</script>
-
-</body>
-</html>
 </script>
 
 </body>
