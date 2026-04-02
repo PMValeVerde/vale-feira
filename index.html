@@ -102,18 +102,23 @@ function vibrar(){
   if (navigator.vibrate) navigator.vibrate(200);
 }
 
-// 📷 SCANNER DEFINITIVO (TRASEIRA)
+// 📷 SCANNER DEFINITIVO
 function abrirScanner(tipo){
 
   const html5QrCode = new Html5Qrcode("reader");
 
+  document.getElementById("reader").innerHTML = "";
+
   html5QrCode.start(
     { facingMode: "environment" },
-    {
-      fps: 10,
-      qrbox: 250
-    },
-    (qr) => {
+    { fps: 10, qrbox: 250 },
+    async (qr) => {
+
+      // 🔥 PARA E LIMPA IMEDIATAMENTE
+      await html5QrCode.stop();
+      await html5QrCode.clear();
+
+      document.getElementById("reader").innerHTML = "";
 
       if (tipo === "servidor"){
         codServidor = qr;
@@ -127,52 +132,51 @@ function abrirScanner(tipo){
 
       beep(800);
       vibrar();
-
-      html5QrCode.stop();
     },
     (err) => {}
-  ).catch(err => {
+  ).catch(async () => {
 
     document.getElementById("status").innerText = "⚠️ Tentando outra câmera...";
 
-    Html5Qrcode.getCameras().then(devices => {
+    const devices = await Html5Qrcode.getCameras();
 
-      if (!devices.length){
-        document.getElementById("status").innerText = "❌ Sem câmera";
-        return;
-      }
+    if (!devices.length){
+      document.getElementById("status").innerText = "❌ Sem câmera";
+      return;
+    }
 
-      let cameraId = devices[devices.length - 1].id;
+    let cameraId = devices[devices.length - 1].id;
 
-      html5QrCode.start(
-        cameraId,
-        { fps: 10, qrbox: 250 },
-        (qr) => {
+    html5QrCode.start(
+      cameraId,
+      { fps: 10, qrbox: 250 },
+      async (qr) => {
 
-          if (tipo === "servidor"){
-            codServidor = qr;
-            document.getElementById("servidor").value = qr;
-          } else {
-            codFeirante = qr;
-            document.getElementById("feirante").value = qr;
-          }
+        await html5QrCode.stop();
+        await html5QrCode.clear();
 
-          document.getElementById("status").innerText = "✅ LEITURA OK";
+        document.getElementById("reader").innerHTML = "";
 
-          beep(800);
-          vibrar();
-
-          html5QrCode.stop();
+        if (tipo === "servidor"){
+          codServidor = qr;
+          document.getElementById("servidor").value = qr;
+        } else {
+          codFeirante = qr;
+          document.getElementById("feirante").value = qr;
         }
-      );
 
-    });
+        document.getElementById("status").innerText = "✅ LEITURA OK";
+
+        beep(800);
+        vibrar();
+      }
+    );
 
   });
 }
 
-// 💰 REGISTRO
-function registrar(){
+// 💰 REGISTRO SEM TRAVAR
+async function registrar(){
 
   let valor = document.getElementById("valor").value;
 
@@ -184,33 +188,52 @@ function registrar(){
     return;
   }
 
-  document.getElementById("status").innerText = "Processando...";
+  document.getElementById("status").innerText = "⏳ Processando...";
 
-  fetch(api + "?servidor=" + codServidor + "&valor=" + valor + "&feirante=" + codFeirante)
-  .then(r => r.json())
-  .then(res => {
+  try {
+
+    let url = api + "?servidor=" + encodeURIComponent(codServidor)
+                    + "&valor=" + encodeURIComponent(valor)
+                    + "&feirante=" + encodeURIComponent(codFeirante);
+
+    let resposta = await fetch(url);
+
+    let texto = await resposta.text();
+
+    let res;
+    try {
+      res = JSON.parse(texto);
+    } catch(e){
+      throw new Error("Resposta inválida");
+    }
 
     if (res.erro){
       document.getElementById("status").innerText = "❌ " + res.erro;
       beep(200);
-    } else {
-      document.getElementById("status").innerText =
-        "✅ COMPRA REALIZADA\nSaldo: R$ " + res.saldo;
-
-      beep(800);
-      vibrar();
-
-      codServidor = "";
-      codFeirante = "";
-      document.getElementById("valor").value = "";
-      document.getElementById("servidor").value = "";
-      document.getElementById("feirante").value = "";
+      return;
     }
 
-  })
-  .catch(() => {
-    document.getElementById("status").innerText = "❌ Erro de conexão";
-  });
+    document.getElementById("status").innerText =
+      "✅ COMPRA REALIZADA\nSaldo: R$ " + res.saldo;
+
+    beep(800);
+    vibrar();
+
+    // 🔄 LIMPA CAMPOS
+    codServidor = "";
+    codFeirante = "";
+    document.getElementById("valor").value = "";
+    document.getElementById("servidor").value = "";
+    document.getElementById("feirante").value = "";
+
+  } catch (erro){
+
+    document.getElementById("status").innerText =
+      "❌ Erro de conexão ou servidor";
+
+    beep(200);
+    console.error(erro);
+  }
 }
 
 // 🔗 AUTO PREENCHIMENTO
