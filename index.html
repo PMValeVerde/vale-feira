@@ -57,6 +57,11 @@ button {
   color: white;
 }
 
+.btn-feirante {
+  background: #9333ea;
+  color: white;
+}
+
 .btn-pagar {
   background: #22c55e;
   color: white;
@@ -84,15 +89,16 @@ button {
 
 <div class="container">
 
-  <button class="btn-scan" onclick="abrirCamera()">📷 Ler QR Code</button>
+  <button class="btn-scan" onclick="lerServidor()">📷 Ler QR Servidor</button>
+  <button class="btn-feirante" onclick="lerFeirante()">🏪 Ler QR Feirante</button>
 
   <div id="reader"></div>
 
   <div class="card">
     <input type="text" id="servidor" placeholder="Servidor" readonly>
     <input type="text" id="nome" placeholder="Nome" readonly>
+    <input type="text" id="feirante" placeholder="Feirante" readonly>
     <input type="number" id="valor" placeholder="Valor (R$)">
-    <input type="text" id="feirante" placeholder="Nome do feirante">
   </div>
 
   <button class="btn-pagar" onclick="pagar()">CONFIRMAR PAGAMENTO</button>
@@ -108,8 +114,8 @@ button {
 
 const API = "https://script.google.com/macros/s/AKfycbyJCYnf7AmIcu48kNYum37p4h0fcCy23lh16X1PHfTI4mq8ErulRSV1fOWs164JReFz/exec";
 
-let processando = false;
 let qr;
+let modo = "";
 
 // mensagens
 function setMsg(msg, cor="white") {
@@ -118,7 +124,6 @@ function setMsg(msg, cor="white") {
   el.style.color = cor;
 }
 
-// sons
 function somOK() {
   document.getElementById("ok").play();
 }
@@ -128,7 +133,7 @@ function somErro() {
 }
 
 // abrir câmera
-function abrirCamera() {
+function abrirCamera(callback) {
 
   document.getElementById("reader").style.display = "block";
 
@@ -139,75 +144,80 @@ function abrirCamera() {
     let traseira = cameras.find(c => c.label.toLowerCase().includes("back"));
     let cameraId = traseira ? traseira.id : cameras[0].id;
 
-    qr.start(
-      cameraId,
-      { fps: 10, qrbox: 250 },
-      onScanSuccess
-    );
+    qr.start(cameraId, { fps: 10, qrbox: 250 }, callback);
 
   }).catch(() => {
     setMsg("Erro ao abrir câmera", "red");
   });
 }
 
-// leitura do QR
-function onScanSuccess(decodedText) {
+// 📌 LER SERVIDOR
+function lerServidor() {
 
-  qr.stop();
+  modo = "servidor";
 
-  // 🔥 corrige QR com URL
-  let servidor = decodedText;
+  abrirCamera((decodedText) => {
 
-  if (decodedText.includes("servidor=")) {
-    servidor = decodedText.split("servidor=")[1];
-  }
+    qr.stop();
 
-  document.getElementById("servidor").value = servidor;
+    let servidor = decodedText;
 
-  setMsg("Consultando...", "#38bdf8");
+    if (decodedText.includes("servidor=")) {
+      servidor = decodedText.split("servidor=")[1];
+    }
 
-  fetch(API + "?servidor=" + encodeURIComponent(servidor))
-    .then(r => r.json())
-    .then(data => {
+    document.getElementById("servidor").value = servidor;
 
-      if (data.erro) {
-        setMsg(data.erro, "red");
-        somErro();
-        return;
-      }
+    setMsg("Consultando...", "#38bdf8");
 
-      document.getElementById("nome").value = data.nome;
+    fetch(API + "?servidor=" + encodeURIComponent(servidor))
+      .then(r => r.json())
+      .then(data => {
 
-      setMsg("Saldo: R$ " + data.saldo, "#22c55e");
-      somOK();
+        if (data.erro) {
+          setMsg(data.erro, "red");
+          somErro();
+          return;
+        }
 
-    })
-    .catch(() => {
-      setMsg("Erro de conexão", "red");
-      somErro();
-    });
+        document.getElementById("nome").value = data.nome;
+
+        setMsg("Saldo: R$ " + data.saldo, "#22c55e");
+        somOK();
+
+      });
+  });
 }
 
-// pagamento
-function pagar() {
+// 📌 LER FEIRANTE
+function lerFeirante() {
 
-  if (processando) return;
+  modo = "feirante";
+
+  abrirCamera((decodedText) => {
+
+    qr.stop();
+
+    let feirante = decodedText;
+
+    document.getElementById("feirante").value = feirante;
+
+    setMsg("Feirante lido com sucesso", "#22c55e");
+    somOK();
+
+  });
+}
+
+// 💳 PAGAMENTO
+function pagar() {
 
   let servidor = document.getElementById("servidor").value;
   let valor = document.getElementById("valor").value;
   let feirante = document.getElementById("feirante").value;
 
-  if (!servidor) {
-    alert("Leia o QR Code");
-    return;
-  }
-
-  if (!valor || valor <= 0) {
-    alert("Informe o valor");
-    return;
-  }
-
-  processando = true;
+  if (!servidor) return alert("Leia o QR do servidor");
+  if (!feirante) return alert("Leia o QR do feirante");
+  if (!valor || valor <= 0) return alert("Informe o valor");
 
   setMsg("Processando...", "#38bdf8");
 
@@ -216,8 +226,6 @@ function pagar() {
         "&feirante=" + encodeURIComponent(feirante))
     .then(r => r.json())
     .then(data => {
-
-      processando = false;
 
       if (data.erro) {
         setMsg(data.erro, "red");
@@ -228,13 +236,10 @@ function pagar() {
       setMsg("✅ Pagamento realizado | Saldo: R$ " + data.saldo, "#22c55e");
       somOK();
 
-      // limpa campos
       document.getElementById("valor").value = "";
-      document.getElementById("feirante").value = "";
 
     })
     .catch(() => {
-      processando = false;
       setMsg("Erro ao processar", "red");
       somErro();
     });
