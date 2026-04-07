@@ -45,7 +45,6 @@ button {
   margin-top:10px;
 }
 </style>
-
 </head>
 
 <body>
@@ -76,8 +75,16 @@ button {
 
 const URL = "https://script.google.com/macros/s/AKfycbwIUVTx29ykJ1O4r-Iqmg-5tpTZpbgFgODti8bceF5_CrrxfjKN9ZzxP8NDiNkj4HnD/exec";
 
-let servidor = "";
+let codigoServidor = "";
+let nomeServidor = "";
+let codigoFeirante = "";
+let senhaFeirante = "";
 let scanner;
+
+// 🔎 extrair nome do QR
+function extrairNome(codigo) {
+  return codigo.split("-").slice(4).join(" ");
+}
 
 // 📷 iniciar câmera
 function startScan(tipo) {
@@ -87,17 +94,20 @@ function startScan(tipo) {
   scanner = new Html5Qrcode("reader");
 
   scanner.start(
-    { facingMode: "environment" }, // 🔥 câmera traseira
+    { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
     (decodedText) => {
 
       scanner.stop();
 
       if (tipo === "servidor") {
-        servidor = decodedText;
+        codigoServidor = decodedText;
+        nomeServidor = extrairNome(decodedText);
         consultar();
       } else {
+        codigoFeirante = decodedText;
         document.getElementById("feirante").value = decodedText;
+        senhaFeirante = prompt("Digite a senha do feirante:");
       }
 
     }
@@ -107,7 +117,7 @@ function startScan(tipo) {
 // 🔎 consulta saldo
 function consultar() {
 
-  fetch(`${URL}?servidor=${servidor}`)
+  fetch(`${URL}?servidor=${encodeURIComponent(nomeServidor)}&consultar=1`)
   .then(r => r.json())
   .then(d => {
 
@@ -117,7 +127,7 @@ function consultar() {
     }
 
     document.getElementById("nome").innerText = d.nome;
-    document.getElementById("saldo").innerText = "R$ " + d.saldo;
+    document.getElementById("saldo").innerText = "R$ " + d.saldo.toFixed(2);
 
   });
 }
@@ -126,9 +136,18 @@ function consultar() {
 function pagar() {
 
   let valor = document.getElementById("valor").value;
-  let feirante = document.getElementById("feirante").value;
 
-  fetch(`${URL}?servidor=${servidor}&valor=${valor}&feirante=${feirante}`)
+  if (!nomeServidor) {
+    alert("Leia o QR do servidor");
+    return;
+  }
+
+  if (!codigoFeirante) {
+    alert("Leia o QR do feirante");
+    return;
+  }
+
+  fetch(`${URL}?servidor=${encodeURIComponent(nomeServidor)}&valor=${valor}&feirante=${codigoFeirante}&senha=${senhaFeirante}`)
   .then(r => r.json())
   .then(d => {
 
