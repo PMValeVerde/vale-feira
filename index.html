@@ -65,15 +65,20 @@ button {
 
 <div class="card">
   <input id="valor" placeholder="Valor (R$)">
-  <input id="feirante" placeholder="Feirante">
+  <input id="feirante" placeholder="Feirante" readonly>
   <button class="btn3" onclick="pagar()">💰 Confirmar</button>
 </div>
+
+<!-- ✅ EXTRATO -->
+<button class="btn2" onclick="verExtrato()">📄 Ver Extrato</button>
+
+<div id="extrato" class="card"></div>
 
 </div>
 
 <script>
 
-const URL = "https://script.google.com/macros/s/AKfycbwlhLik8f5l73a1CYuGMjO-ZqR-zVpO_SuVGyu_4hxrg6xVJjfRzncjMh-yuH-o5QPj/exec";
+const URL = "https://script.google.com/macros/s/AKfycbwIUVTx29ykJ1O4r-Iqmg-5tpTZpbgFgODti8bceF5_CrrxfjKN9ZzxP8NDiNkj4HnD/exec";
 
 let codigoServidor = "";
 let nomeServidor = "";
@@ -158,6 +163,36 @@ function pagar() {
 
     alert("Pagamento realizado!");
     consultar();
+
+  });
+}
+
+// 📄 EXTRATO DO FEIRANTE
+function verExtrato() {
+
+  if (!codigoFeirante) {
+    alert("Leia o QR do feirante primeiro");
+    return;
+  }
+
+  fetch(`${URL}?feirante=${codigoFeirante}&senha=${senhaFeirante}&extrato=1`)
+  .then(r => r.json())
+  .then(d => {
+
+    if (d.erro) {
+      alert(d.erro);
+      return;
+    }
+
+    let html = "<h3>📄 Extrato</h3>";
+
+    d.extrato.forEach(e => {
+      html += `<p>${e.data} - ${e.servidor} - R$ ${e.valor.toFixed(2)}</p>`;
+    });
+
+    html += `<hr><strong>💰 Total do dia: R$ ${d.totalHoje.toFixed(2)}</strong>`;
+
+    document.getElementById("extrato").innerHTML = html;
 
   });
 }
