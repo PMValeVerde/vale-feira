@@ -1,48 +1,59 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
 <title>Vale Feira</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 body {
-  margin:0;
   font-family: Arial;
-  background:#0f172a;
-  color:white;
-  text-align:center;
+  background: #0f172a;
+  color: white;
+  text-align: center;
+  margin: 0;
 }
 
 .container {
-  padding:20px;
+  padding: 20px;
+}
+
+h1 {
+  color: #22c55e;
 }
 
 button {
-  width:100%;
-  padding:18px;
-  margin:10px 0;
-  border:none;
-  border-radius:12px;
-  font-size:18px;
-  color:white;
+  padding: 15px;
+  margin: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
 }
 
-.btn1 { background:#2563eb; }
-.btn2 { background:#7c3aed; }
-.btn3 { background:#16a34a; }
+.btn-servidor { background: #2563eb; color: white; }
+.btn-feirante { background: #16a34a; color: white; }
+.btn-pagar { background: #22c55e; color: white; width: 100%; }
 
-.card {
-  background:#1e293b;
-  padding:20px;
-  border-radius:15px;
-  margin-top:15px;
+input {
+  padding: 12px;
+  margin: 5px;
+  width: 90%;
+  border-radius: 8px;
+  border: none;
 }
 
 #reader {
-  width:100%;
-  margin-top:10px;
+  width: 300px;
+  margin: auto;
+}
+
+.card {
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 12px;
+  margin-top: 15px;
 }
 </style>
 </head>
@@ -51,26 +62,22 @@ button {
 
 <div class="container">
 
-<h2>💳 Vale Feira</h2>
+<h1>💳 Vale Feira</h1>
 
-<button class="btn1" onclick="startScan('servidor')">📷 Ler Servidor</button>
-<button class="btn2" onclick="startScan('feirante')">📷 Ler Feirante</button>
+<button class="btn-servidor" onclick="lerServidor()">📷 Ler Servidor</button>
+<button class="btn-feirante" onclick="lerFeirante()">🧑‍🌾 Ler Feirante</button>
 
 <div id="reader"></div>
 
-<div class="card">
-  <h3 id="nome">Nenhum servidor</h3>
-  <h1 id="saldo">R$ 0,00</h1>
-</div>
+<div id="info" class="card"></div>
 
-<div class="card">
-  <input id="valor" placeholder="Valor (R$)">
-  <input id="feirante" placeholder="Feirante" readonly>
-  <button class="btn3" onclick="pagar()">💰 Confirmar</button>
-</div>
+<input type="number" id="valor" placeholder="Valor da compra">
 
-<!-- ✅ EXTRATO -->
-<button class="btn2" onclick="verExtrato()">📄 Ver Extrato</button>
+<button class="btn-pagar" onclick="pagar()">💰 Pagar</button>
+
+<div id="resultado" class="card"></div>
+
+<button class="btn-feirante" onclick="verExtrato()">📄 Ver Extrato</button>
 
 <div id="extrato" class="card"></div>
 
@@ -78,72 +85,68 @@ button {
 
 <script>
 
+// 🔗 SUA URL (já está certa)
 const URL = "https://script.google.com/macros/s/AKfycbwlhLik8f5l73a1CYuGMjO-ZqR-zVpO_SuVGyu_4hxrg6xVJjfRzncjMh-yuH-o5QPj/exec";
 
+// VARIÁVEIS
 let codigoServidor = "";
 let nomeServidor = "";
 let codigoFeirante = "";
 let senhaFeirante = "";
-let scanner;
 
-// 🔎 extrair nome do QR
+// =========================
+// 🔎 EXTRAI NOME DO QR
+// =========================
 function extrairNome(codigo) {
   return codigo.split("-").slice(4).join(" ");
 }
 
-// 📷 iniciar câmera
-function startScan(tipo) {
+// =========================
+// 📷 LEITOR QR SERVIDOR
+// =========================
+function lerServidor() {
+  iniciarLeitor((codigo) => {
 
-  document.getElementById("reader").innerHTML = "";
+    codigoServidor = codigo;
+    nomeServidor = extrairNome(codigo);
 
-  scanner = new Html5Qrcode("reader");
+    fetch(`${URL}?servidor=${encodeURIComponent(nomeServidor)}&consultar=1`)
+    .then(r => r.json())
+    .then(d => {
 
-  scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    (decodedText) => {
-
-      scanner.stop();
-
-      if (tipo === "servidor") {
-        codigoServidor = decodedText;
-        nomeServidor = extrairNome(decodedText);
-        consultar();
-      } else {
-        codigoFeirante = decodedText;
-        document.getElementById("feirante").value = decodedText;
-        senhaFeirante = prompt("Digite a senha do feirante:");
+      if (d.erro) {
+        alert(d.erro);
+        return;
       }
 
-    }
-  );
-}
-
-// 🔎 consulta saldo
-function consultar() {
-
-  fetch(`${URL}?servidor=${encodeURIComponent(nomeServidor)}&consultar=1`)
-  .then(r => r.json())
-  .then(d => {
-
-    if(d.erro){
-      alert(d.erro);
-      return;
-    }
-
-    document.getElementById("nome").innerText = d.nome;
-    document.getElementById("saldo").innerText = "R$ " + d.saldo.toFixed(2);
-
+      document.getElementById("info").innerHTML = `
+        <h3>${d.nome}</h3>
+        <p>${d.secretaria}</p>
+        <p>💰 Saldo: R$ ${d.saldo.toFixed(2)}</p>
+      `;
+    });
   });
 }
 
-// 💰 pagamento
+// =========================
+// 📷 LEITOR QR FEIRANTE
+// =========================
+function lerFeirante() {
+  iniciarLeitor((codigo) => {
+    codigoFeirante = codigo;
+    senhaFeirante = prompt("Digite a senha do feirante:");
+  });
+}
+
+// =========================
+// 💰 PAGAMENTO
+// =========================
 function pagar() {
 
   let valor = document.getElementById("valor").value;
 
   if (!nomeServidor) {
-    alert("Leia o QR do servidor");
+    alert("Leia o QR do servidor primeiro");
     return;
   }
 
@@ -152,28 +155,25 @@ function pagar() {
     return;
   }
 
-  fetch(`${URL}?servidor=${encodeURIComponent(nomeServidor)}&valor=${valor}&feirante=${codigoFeirante}&senha=${senhaFeirante}`)
+  fetch(`${URL}?servidor=${encodeURIComponent(nomeServidor)}&feirante=${codigoFeirante}&valor=${valor}&senha=${senhaFeirante}`)
   .then(r => r.json())
   .then(d => {
 
-    if(d.erro){
-      alert(d.erro);
+    if (d.erro) {
+      document.getElementById("resultado").innerHTML = "❌ " + d.erro;
       return;
     }
 
-    alert("Pagamento realizado!");
-    consultar();
+    document.getElementById("resultado").innerHTML =
+      `✅ Pagamento realizado<br>Saldo restante: R$ ${d.saldo.toFixed(2)}`;
 
   });
 }
 
-// 📄 EXTRATO DO FEIRANTE
+// =========================
+// 📄 EXTRATO
+// =========================
 function verExtrato() {
-
-  if (!codigoFeirante) {
-    alert("Leia o QR do feirante primeiro");
-    return;
-  }
 
   fetch(`${URL}?feirante=${codigoFeirante}&senha=${senhaFeirante}&extrato=1`)
   .then(r => r.json())
@@ -184,17 +184,35 @@ function verExtrato() {
       return;
     }
 
-    let html = "<h3>📄 Extrato</h3>";
+    let html = "<h3>Extrato</h3>";
 
     d.extrato.forEach(e => {
-      html += `<p>${e.data} - ${e.servidor} - R$ ${e.valor.toFixed(2)}</p>`;
+      html += `<p>${e.data} - ${e.servidor} - R$ ${e.valor}</p>`;
     });
 
     html += `<hr><strong>💰 Total do dia: R$ ${d.totalHoje.toFixed(2)}</strong>`;
 
     document.getElementById("extrato").innerHTML = html;
-
   });
+}
+
+// =========================
+// 📷 FUNÇÃO LEITOR
+// =========================
+function iniciarLeitor(callback) {
+
+  document.getElementById("reader").innerHTML = "";
+
+  const html5QrCode = new Html5Qrcode("reader");
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+      html5QrCode.stop();
+      callback(decodedText);
+    }
+  );
 }
 
 </script>
