@@ -1,212 +1,545 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vale Feira</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vale-Feira Digital</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+    body {
+      margin: 0;
+      background: #f3f4f6;
+      color: #111827;
+    }
 
-<style>
-body {
-  margin:0;
-  font-family: Arial;
-  background:#0f172a;
-  color:white;
-  text-align:center;
-}
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px;
+    }
 
-.container {
-  padding:20px;
-}
+    .card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
 
-button {
-  width:100%;
-  padding:18px;
-  margin:10px 0;
-  border:none;
-  border-radius:12px;
-  font-size:18px;
-  color:white;
-}
+    h1 {
+      font-size: 24px;
+      margin: 0 0 16px;
+      text-align: center;
+    }
 
-.btn1 { background:#2563eb; }
-.btn2 { background:#7c3aed; }
-.btn3 { background:#16a34a; }
+    h2 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
 
-.card {
-  background:#1e293b;
-  padding:20px;
-  border-radius:15px;
-  margin-top:15px;
-}
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+      font-size: 14px;
+    }
 
-#reader {
-  width:100%;
-  margin-top:10px;
-  .valor:focus {
-  outline: none;
-  box-shadow: 0 0 10px #22c55e;
-}
-  .valor {
-  font-size: 28px;
-  padding: 20px;
-  text-align: center;
-  font-weight: bold;
-}
-</style>
+    input, button, select {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #059669;
+      color: white;
+    }
+
+    .btn-warning {
+      background: #d97706;
+      color: white;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+    }
+
+    .btn-gray {
+      background: #6b7280;
+      color: white;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #4b5563;
+      margin-top: -6px;
+      margin-bottom: 12px;
+    }
+
+    .status {
+      padding: 12px;
+      border-radius: 10px;
+      margin-top: 8px;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+
+    .ok {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .erro {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .scanner {
+      width: 100%;
+      min-height: 260px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      margin-bottom: 12px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .result-box {
+      background: #f9fafb;
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+    }
+
+    .muted {
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 12px 0;
+    }
+  </style>
 </head>
-
 <body>
+  <div class="container">
+    <h1>Vale-Feira Digital</h1>
 
-<div class="container">
+    <div class="card">
+      <h2>Configuração</h2>
 
-<h2>💳 Vale Feira</h2>
+      <label for="scriptUrl">URL do Apps Script</label>
+      <input
+        type="text"
+        id="scriptUrl"
+        value="https://script.google.com/macros/s/AKfycbwIUVTx29ykJ1O4r-Iqmg-5tpTZpbgFgODti8bceF5_CrrxfjKN9ZzxP8NDiNkj4HnD/exec"
+      />
 
-<button class="btn1" onclick="startScan('servidor')">📷 Ler Servidor</button>
-<button class="btn2" onclick="startScan('feirante')">📷 Ler Feirante</button>
+      <div class="small">
+        Esta URL já veio preenchida com a URL que você me informou.
+      </div>
+    </div>
 
-<div id="reader"></div>
+    <div class="card">
+      <h2>Leitura de QR Code</h2>
 
-<div class="card">
-  <h3 id="nome">Nenhum servidor</h3>
-  <h1 id="saldo">R$ 0,00</h1>
-</div>
+      <label for="tipoLeitura">O que deseja ler?</label>
+      <select id="tipoLeitura">
+        <option value="servidor">QR do Servidor</option>
+        <option value="feirante">QR do Feirante</option>
+      </select>
 
-<div class="card">
-  <input id="valor" type="number" step="0.01" placeholder="0,00" class="valor">
-  <input id="feirante" placeholder="Feirante" readonly>
-  <button class="btn3" onclick="pagar()">💰 Confirmar</button>
-</div>
+      <button class="btn-primary" onclick="iniciarLeitura()">Iniciar câmera</button>
+      <button class="btn-gray" onclick="pararLeitura()">Parar câmera</button>
 
-<!-- ✅ EXTRATO -->
-<button class="btn2" onclick="verExtrato()">📄 Ver Extrato</button>
+      <div id="reader" class="scanner"></div>
 
-<div id="extrato" class="card"></div>
+      <div class="result-box" id="resultadoLeitura">Nenhum QR lido ainda.</div>
+    </div>
 
-</div>
+    <div class="card">
+      <h2>Servidor</h2>
 
-<script>
+      <label for="servidorId">ID do servidor</label>
+      <input type="text" id="servidorId" placeholder="Ex.: SV-000001" readonly>
 
-const URL = "https://script.google.com/macros/s/AKfycbwASFPgI7QYP7QRsx98HI-x_1A1TOUhNpkrsqgN49mpCx4y7xmhkZS6wBcxPGYi1o8f/exec";
+      <label for="servidorNome">Nome do servidor</label>
+      <input type="text" id="servidorNome" placeholder="Será preenchido após consultar saldo" readonly>
 
-let codigoServidor = "";
-let nomeServidor = "";
-let codigoFeirante = "";
-let senhaFeirante = "";
-let scanner;
+      <label for="servidorSecretaria">Secretaria</label>
+      <input type="text" id="servidorSecretaria" placeholder="Será preenchido após consultar saldo" readonly>
 
-// 🔎 extrair nome do QR
-function extrairNome(codigo) {
-  return codigo.split("-").slice(4).join(" ");
-}
+      <label for="servidorSaldo">Saldo</label>
+      <input type="text" id="servidorSaldo" placeholder="Será preenchido após consultar saldo" readonly>
 
-// 📷 iniciar câmera
-function startScan(tipo) {
+      <button class="btn-secondary" onclick="consultarSaldo()">Consultar saldo</button>
+    </div>
 
-  document.getElementById("reader").innerHTML = "";
+    <div class="card">
+      <h2>Pagamento</h2>
 
-  scanner = new Html5Qrcode("reader");
+      <label for="feiranteCodigo">Código do feirante</label>
+      <input type="text" id="feiranteCodigo" placeholder="Lido via QR do feirante" readonly>
 
-  scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    (decodedText) => {
+      <label for="valorCompra">Valor da compra</label>
+      <input type="number" id="valorCompra" placeholder="Ex.: 10" step="0.01" min="0">
 
-      scanner.stop();
+      <label for="senhaFeirante">Senha do feirante</label>
+      <input type="password" id="senhaFeirante" placeholder="Digite a senha do feirante">
 
-      if (tipo === "servidor") {
-        codigoServidor = decodedText;
-        nomeServidor = extrairNome(decodedText);
-        consultar();
-      } else {
-        codigoFeirante = decodedText;
-        document.getElementById("feirante").value = decodedText;
-        senhaFeirante = prompt("Digite a senha do feirante:");
+      <button id="btnPagar" class="btn-warning" onclick="realizarPagamento()">Pagar</button>
+
+      <div class="divider"></div>
+
+      <div class="result-box" id="resultadoPagamento">Nenhum pagamento realizado ainda.</div>
+    </div>
+
+    <div class="card">
+      <h2>Extrato do Feirante</h2>
+
+      <label for="extratoCodigoFeirante">Código do feirante</label>
+      <input type="text" id="extratoCodigoFeirante" placeholder="Pode usar o mesmo QR do feirante">
+
+      <label for="extratoSenhaFeirante">Senha do feirante</label>
+      <input type="password" id="extratoSenhaFeirante" placeholder="Digite a senha do feirante">
+
+      <button class="btn-danger" onclick="consultarExtrato()">Consultar extrato</button>
+
+      <div class="divider"></div>
+
+      <div class="result-box" id="resultadoExtrato">Nenhum extrato consultado ainda.</div>
+    </div>
+
+    <div id="mensagemGeral" class="status" style="display:none;"></div>
+  </div>
+
+  <script>
+    let html5QrCode = null;
+    let cameraAtiva = false;
+
+    function getScriptUrl() {
+      return document.getElementById("scriptUrl").value.trim();
+    }
+
+    function extrairID(codigo) {
+      return String(codigo || "").trim();
+    }
+
+    function extrairCodigoFeirante(codigo) {
+      return String(codigo || "").trim();
+    }
+
+    function mostrarMensagem(texto, tipo = "ok") {
+      const box = document.getElementById("mensagemGeral");
+      box.style.display = "block";
+      box.className = "status " + (tipo === "ok" ? "ok" : "erro");
+      box.textContent = texto;
+    }
+
+    function limparMensagem() {
+      const box = document.getElementById("mensagemGeral");
+      box.style.display = "none";
+      box.textContent = "";
+      box.className = "status";
+    }
+
+    function formatarMoeda(valor) {
+      const numero = Number(valor || 0);
+      return numero.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
+    }
+
+    async function iniciarLeitura() {
+      limparMensagem();
+
+      const tipo = document.getElementById("tipoLeitura").value;
+      const readerId = "reader";
+
+      try {
+        if (cameraAtiva) {
+          await pararLeitura();
+        }
+
+        html5QrCode = new Html5Qrcode(readerId);
+
+        const cameras = await Html5Qrcode.getCameras();
+
+        if (!cameras || cameras.length === 0) {
+          mostrarMensagem("Nenhuma câmera encontrada.", "erro");
+          return;
+        }
+
+        let cameraId = cameras[0].id;
+
+        // Tenta usar câmera traseira quando houver
+        const traseira = cameras.find(c =>
+          /back|traseira|rear|environment/i.test(c.label)
+        );
+        if (traseira) {
+          cameraId = traseira.id;
+        }
+
+        await html5QrCode.start(
+          cameraId,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+          },
+          (decodedText) => {
+            const valorLido = String(decodedText || "").trim();
+            document.getElementById("resultadoLeitura").textContent =
+              "QR lido com sucesso:\n" + valorLido;
+
+            if (tipo === "servidor") {
+              const idServidor = extrairID(valorLido);
+              document.getElementById("servidorId").value = idServidor;
+            } else {
+              const codigoFeirante = extrairCodigoFeirante(valorLido);
+              document.getElementById("feiranteCodigo").value = codigoFeirante;
+              document.getElementById("extratoCodigoFeirante").value = codigoFeirante;
+            }
+
+            pararLeitura();
+          },
+          (errorMessage) => {
+            // Ignora erros contínuos de leitura enquanto a câmera busca o QR
+          }
+        );
+
+        cameraAtiva = true;
+        mostrarMensagem("Câmera iniciada. Aponte para o QR Code.", "ok");
+
+      } catch (erro) {
+        mostrarMensagem("Erro ao iniciar câmera: " + erro.message, "erro");
+      }
+    }
+
+    async function pararLeitura() {
+      try {
+        if (html5QrCode && cameraAtiva) {
+          await html5QrCode.stop();
+          await html5QrCode.clear();
+        }
+      } catch (erro) {
+        // ignora
+      } finally {
+        cameraAtiva = false;
+        html5QrCode = null;
+      }
+    }
+
+    async function consultarSaldo() {
+      limparMensagem();
+
+      const scriptUrl = getScriptUrl();
+      const servidorId = document.getElementById("servidorId").value.trim();
+
+      if (!scriptUrl) {
+        mostrarMensagem("Informe a URL do Apps Script.", "erro");
+        return;
       }
 
-    }
-  );
-}
+      if (!servidorId) {
+        mostrarMensagem("Leia o QR do servidor ou preencha o ID do servidor.", "erro");
+        return;
+      }
 
-// 🔎 consulta saldo
-function consultar() {
+      try {
+        const url = `${scriptUrl}?servidor=${encodeURIComponent(servidorId)}&consultar=1`;
+        const resposta = await fetch(url);
+        const dados = await resposta.json();
 
-  fetch(`${URL}?servidor=${encodeURIComponent(nomeServidor)}&consultar=1`)
-  .then(r => r.json())
-  .then(d => {
+        if (dados.status !== "ok") {
+          mostrarMensagem(dados.mensagem || "Erro ao consultar saldo.", "erro");
+          return;
+        }
 
-    if(d.erro){
-      alert(d.erro);
-      return;
-    }
+        document.getElementById("servidorNome").value = dados.nome || "";
+        document.getElementById("servidorSecretaria").value = dados.secretaria || "";
+        document.getElementById("servidorSaldo").value = formatarMoeda(dados.saldo || 0);
 
-    document.getElementById("nome").innerText = d.nome;
-    document.getElementById("saldo").innerText = "R$ " + d.saldo.toFixed(2);
-
-  });
-}
-
-// 💰 pagamento
-function pagar() {
-
-  let valor = document.getElementById("valor").value;
-
-  if (!nomeServidor) {
-    alert("Leia o QR do servidor");
-    return;
-  }
-
-  if (!codigoFeirante) {
-    alert("Leia o QR do feirante");
-    return;
-  }
-
-  fetch(`${URL}?servidor=${encodeURIComponent(nomeServidor)}&valor=${valor}&feirante=${codigoFeirante}&senha=${senhaFeirante}`)
-  .then(r => r.json())
-  .then(d => {
-
-    if(d.erro){
-      alert(d.erro);
-      return;
+        mostrarMensagem("Saldo consultado com sucesso.", "ok");
+      } catch (erro) {
+        mostrarMensagem("Erro ao consultar saldo: " + erro.message, "erro");
+      }
     }
 
-    alert("Pagamento realizado!");
-    consultar();
+    async function realizarPagamento() {
+      limparMensagem();
 
-  });
-}
+      const scriptUrl = getScriptUrl();
+      const servidorId = document.getElementById("servidorId").value.trim();
+      const feiranteCodigo = document.getElementById("feiranteCodigo").value.trim();
+      const valorCompra = document.getElementById("valorCompra").value.trim();
+      const senhaFeirante = document.getElementById("senhaFeirante").value.trim();
+      const btn = document.getElementById("btnPagar");
 
-// 📄 EXTRATO DO FEIRANTE
-function verExtrato() {
+      if (!scriptUrl) {
+        mostrarMensagem("Informe a URL do Apps Script.", "erro");
+        return;
+      }
 
-  if (!codigoFeirante) {
-    alert("Leia o QR do feirante primeiro");
-    return;
-  }
+      if (!servidorId) {
+        mostrarMensagem("Leia o QR do servidor.", "erro");
+        return;
+      }
 
-  fetch(`${URL}?feirante=${codigoFeirante}&senha=${senhaFeirante}&extrato=1`)
-  .then(r => r.json())
-  .then(d => {
+      if (!feiranteCodigo) {
+        mostrarMensagem("Leia o QR do feirante.", "erro");
+        return;
+      }
 
-    if (d.erro) {
-      alert(d.erro);
-      return;
+      if (!valorCompra || Number(valorCompra) <= 0) {
+        mostrarMensagem("Informe um valor de compra válido.", "erro");
+        return;
+      }
+
+      if (!senhaFeirante) {
+        mostrarMensagem("Digite a senha do feirante.", "erro");
+        return;
+      }
+
+      try {
+        btn.disabled = true;
+        btn.textContent = "Processando...";
+
+        const url =
+          `${scriptUrl}?servidor=${encodeURIComponent(servidorId)}` +
+          `&feirante=${encodeURIComponent(feiranteCodigo)}` +
+          `&valor=${encodeURIComponent(valorCompra)}` +
+          `&senha=${encodeURIComponent(senhaFeirante)}`;
+
+        const resposta = await fetch(url);
+        const dados = await resposta.json();
+
+        if (dados.status !== "ok") {
+          mostrarMensagem(dados.mensagem || "Erro ao realizar pagamento.", "erro");
+          document.getElementById("resultadoPagamento").textContent =
+            "Falha no pagamento.\n" + (dados.mensagem || "Erro desconhecido.");
+          return;
+        }
+
+        document.getElementById("servidorSaldo").value = formatarMoeda(dados.novoSaldo || 0);
+
+        document.getElementById("resultadoPagamento").textContent =
+          "Pagamento realizado com sucesso.\n\n" +
+          "Servidor ID: " + (dados.id || "") + "\n" +
+          "Servidor: " + (dados.nome || "") + "\n" +
+          "Feirante: " + (dados.feirante || "") + "\n" +
+          "Valor: " + formatarMoeda(dados.valor || 0) + "\n" +
+          "Novo saldo: " + formatarMoeda(dados.novoSaldo || 0) + "\n" +
+          "ID da transação: " + (dados.idTransacao || "");
+
+        mostrarMensagem("Pagamento concluído com sucesso.", "ok");
+      } catch (erro) {
+        mostrarMensagem("Erro ao realizar pagamento: " + erro.message, "erro");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Pagar";
+      }
     }
 
-    let html = "<h3>📄 Extrato</h3>";
+    async function consultarExtrato() {
+      limparMensagem();
 
-    d.extrato.forEach(e => {
-      html += `<p>${e.data} - ${e.servidor} - R$ ${e.valor.toFixed(2)}</p>`;
-    });
+      const scriptUrl = getScriptUrl();
+      const codigoFeirante = document.getElementById("extratoCodigoFeirante").value.trim();
+      const senhaFeirante = document.getElementById("extratoSenhaFeirante").value.trim();
 
-    html += `<hr><strong>💰 Total do dia: R$ ${d.totalHoje.toFixed(2)}</strong>`;
+      if (!scriptUrl) {
+        mostrarMensagem("Informe a URL do Apps Script.", "erro");
+        return;
+      }
 
-    document.getElementById("extrato").innerHTML = html;
+      if (!codigoFeirante) {
+        mostrarMensagem("Informe ou leia o QR do feirante.", "erro");
+        return;
+      }
 
-  });
-}
+      if (!senhaFeirante) {
+        mostrarMensagem("Digite a senha do feirante.", "erro");
+        return;
+      }
 
-</script>
+      try {
+        const url =
+          `${scriptUrl}?feirante=${encodeURIComponent(codigoFeirante)}` +
+          `&senha=${encodeURIComponent(senhaFeirante)}` +
+          `&extrato=1`;
 
+        const resposta = await fetch(url);
+        const dados = await resposta.json();
+
+        if (dados.status !== "ok") {
+          mostrarMensagem(dados.mensagem || "Erro ao consultar extrato.", "erro");
+          return;
+        }
+
+        let texto = "";
+        texto += "Feirante: " + (dados.feirante || "") + "\n";
+        texto += "Quantidade de movimentos: " + (dados.quantidade || 0) + "\n\n";
+
+        if (!dados.movimentos || dados.movimentos.length === 0) {
+          texto += "Nenhum movimento encontrado.";
+        } else {
+          dados.movimentos.forEach((mov, i) => {
+            texto += `#${i + 1}\n`;
+            texto += "Data: " + (mov.data || "") + "\n";
+            texto += "Servidor ID: " + (mov.servidorId || "") + "\n";
+            texto += "Servidor: " + (mov.servidorNome || "") + "\n";
+            texto += "Secretaria: " + (mov.secretaria || "") + "\n";
+            texto += "Valor: " + formatarMoeda(mov.valor || 0) + "\n";
+            texto += "Saldo após: " + formatarMoeda(mov.saldoApos || 0) + "\n";
+            texto += "ID transação: " + (mov.idTransacao || "") + "\n";
+            texto += "\n";
+          });
+        }
+
+        document.getElementById("resultadoExtrato").textContent = texto;
+        mostrarMensagem("Extrato consultado com sucesso.", "ok");
+      } catch (erro) {
+        mostrarMensagem("Erro ao consultar extrato: " + erro.message, "erro");
+      }
+    }
+  </script>
 </body>
 </html>
